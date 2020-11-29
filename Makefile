@@ -3,7 +3,7 @@ LD := lld
 
 CFLAGS := \
 	-ffreestanding -MMD -mno-red-zone -std=c11 \
-	-target aarch64-unknown-gnu -Wall -Werror -pedantic
+	-target aarch64-unknown-eabi -Wall -Werror -pedantic
 LDFLAGS := \
 	-flavor ld -e main
 
@@ -25,3 +25,4 @@ all: kernel.elf
 
 clean:
 	rm -rf *.elf *.o *.d
+
