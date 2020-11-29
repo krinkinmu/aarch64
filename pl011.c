@@ -57,9 +57,7 @@ static void calculate_divisors(
 }
 
 int pl011_setup(
-    struct pl011 *dev,
-    uint64_t base_address,
-    uint64_t base_clock)
+    struct pl011 *dev, uint64_t base_address, uint64_t base_clock)
 {
     dev->base_address = base_address;
     dev->base_clock = base_clock;

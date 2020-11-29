@@ -1,7 +1,6 @@
 #ifndef __PL011_H__
 #define __PL011_H__
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -29,10 +28,7 @@ struct pl011 {
 
 // Initialize PL011 device with the given parameters.
 // Returns 0 on success.
-int pl011_setup(
-    struct pl011 *dev,
-    uint64_t base_address,
-    uint64_t base_clock);
+int pl011_setup(struct pl011 *dev, uint64_t base_address, uint64_t base_clock);
 
 // Reset the UART controller. That's the easiest thing to do if the controller
 // got into a weird state. That being said since I don't really check for errors
