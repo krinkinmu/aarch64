@@ -7,6 +7,7 @@ static const uint32_t FBRD_OFFSET = 0x028;
 static const uint32_t LCR_OFFSET = 0x02c;
 static const uint32_t CR_OFFSET = 0x030;
 static const uint32_t IMSC_OFFSET = 0x038;
+static const uint32_t ICR_OFFSET = 0x044;
 static const uint32_t DMACR_OFFSET = 0x048;
 
 static const uint32_t CR_TXEN = (1 << 8);
@@ -67,6 +68,19 @@ int pl011_setup(
     dev->baudrate = 115200;
     dev->data_bits = 8;
     dev->stop_bits = 1;
+
+    // I don't exactly know the cause, but when UEFI firmware uses this serial
+    // device and has some outstanding transfers (I don't know wherether they
+    // are actually buffered in PL011 FIFOs or somewhere in the UEFI firmware)
+    // reset gets the device stuck.
+    //
+    // Experimentally I discovered that waiting on any outgoing PL011 transfers
+    // to complete masks (I'm not sure if it actually solves it for sure) the
+    // issue. Thus this wait_tx_complete call here.
+    //
+    // This peculiar behavior was observed on HiKey960 board. I cannot
+    // reproduce the problem in QEMU (unsurprisingly).
+    wait_tx_complete(dev);
     return pl011_reset(dev);
 }
 
@@ -106,6 +120,12 @@ int pl011_reset(const struct pl011 *dev)
     wait_tx_complete(dev);
     *reg(dev, LCR_OFFSET) = (lcr & ~LCR_FEN);
 
+    *reg(dev, IMSC_OFFSET) = 0x7ff;
+
+    *reg(dev, ICR_OFFSET) = 0x7ff;
+
+    *reg(dev, DMACR_OFFSET) = 0x0;
+
     // while UART is disabled I will also program all other registers besides
     // the control register:
     //   1. IBRD and FBRD that control the baudrate
@@ -121,10 +141,6 @@ int pl011_reset(const struct pl011 *dev)
     if (dev->stop_bits == 2)
         lcr |= LCR_STP2;
     *reg(dev, LCR_OFFSET) = lcr;
-
-    *reg(dev, IMSC_OFFSET) = 0x7ff;
-
-    *reg(dev, DMACR_OFFSET) = 0x0;
 
     // steps 4 - 5 of the control register programming sequence
     *reg(dev, CR_OFFSET) = CR_TXEN;
