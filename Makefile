@@ -15,7 +15,7 @@ default: all
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libstart.a:
-	cd kernel ; cargo build --release ; cd -
+	cd kernel ; cargo build --release --target=aarch64-unknown-none ; cd -
 	cp kernel/target/aarch64-unknown-none/release/libstart.a $@
 
 kernel.elf: main.o pl011.o libstart.a
