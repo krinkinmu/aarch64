@@ -1,0 +1,9 @@
+[package]
+name = "pl011"
+version = "0.1.0"
+authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "pl011"
+crate-type = ["rlib"]

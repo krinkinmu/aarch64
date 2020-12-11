@@ -1,0 +1,13 @@
+[workspace]
+members = [
+    "runtime",
+    "start",
+    "pl011",
+]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+

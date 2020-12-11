@@ -1,0 +1,3 @@
+[build]
+jobs = 8
+target = "aarch64-unknown-none"

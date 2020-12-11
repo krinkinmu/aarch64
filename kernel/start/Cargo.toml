@@ -1,0 +1,13 @@
+[package]
+name = "start"
+version = "0.1.0"
+authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "start"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+runtime = { path = "../runtime" }
+pl011 = { path = "../pl011" }

@@ -1,3 +1,6 @@
 *.o
 *.d
+*.a
 *.elf
+*.lock
+kernel/target
