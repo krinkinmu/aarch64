@@ -28,7 +28,7 @@ kernel.elf: main.o pl011.o libstart.a
 all: kernel.elf
 
 test:
-	cd kernel/pl011 ; cargo test --target=x86_64-unknown-linux-gnu ; cd -
+	cd kernel/pl011 ; cargo test ; cd -
 
 clean:
 	cd kernel ; cargo clean ; cd -
