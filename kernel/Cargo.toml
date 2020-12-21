@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "runtime",
-    "start",
+    "kernel",
     "pl011",
+    "runtime",
 ]
 
 [profile.dev]

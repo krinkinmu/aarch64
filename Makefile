@@ -1,29 +1,27 @@
-CC := clang
-LD := lld
+export CC := clang
+export AR := llvm-ar
+export LD := lld
 
-CFLAGS := \
+export CFLAGS := \
 	-ffreestanding -MMD -mno-red-zone -std=c11 \
 	-target aarch64-unknown-none -Wall -Werror -pedantic
-LDFLAGS := \
-	-flavor ld -e main
-
-SRCS := main.c pl011.c
+export LDFLAGS := \
+	-flavor ld -e main -m aarch64elf
 
 default: all
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-libstart.a:
+libkernel.a:
 	cd kernel ; cargo build --release --target=aarch64-unknown-none ; cd -
-	cp kernel/target/aarch64-unknown-none/release/libstart.a $@
+	cp kernel/target/aarch64-unknown-none/release/libkernel.a $@
 
-kernel.elf: main.o pl011.o libstart.a
+libbootstrap.a:
+	$(MAKE) -C bootstrap
+	cp bootstrap/libbootstrap.a $@
+
+kernel.elf: libbootstrap.a libkernel.a
 	$(LD) $(LDFLAGS) $^ -o $@
 
--include $(SRCS:.c=.d)
-
-.PHONY: clean all default test
+.PHONY: clean all default test libkernel.a libbootstrap.a
 
 all: kernel.elf
 
@@ -32,5 +30,6 @@ test:
 
 clean:
 	cd kernel ; cargo clean ; cd -
+	$(MAKE) -C bootstrap clean
 	rm -rf *.elf *.o *.d *.a
 

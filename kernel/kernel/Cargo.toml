@@ -1,11 +1,11 @@
 [package]
-name = "start"
+name = "kernel"
 version = "0.1.0"
 authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "start"
+name = "kernel"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
