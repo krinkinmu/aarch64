@@ -9,5 +9,6 @@ name = "kernel"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-runtime = { path = "../runtime" }
+devicetree = { path = "../devicetree" }
 pl011 = { path = "../pl011" }
+runtime = { path = "../runtime" }

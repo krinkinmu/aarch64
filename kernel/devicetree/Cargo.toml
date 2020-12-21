@@ -1,0 +1,9 @@
+[package]
+name = "devicetree"
+version = "0.1.0"
+authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "devicetree"
+crate-type = ["rlib"]

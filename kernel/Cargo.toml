@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "devicetree",
     "kernel",
     "pl011",
     "runtime",

@@ -1,4 +1,5 @@
 #![no_std]
+extern crate devicetree;
 extern crate runtime;
 use pl011::PL011;
 
