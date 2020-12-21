@@ -39,7 +39,8 @@ struct reserved_memory {
 // bootstrap code is to combine information from various sources into this
 // structure to pass it to the kernel.
 struct boot_info {
-    uint64_t devicetree;
+    uint64_t devicetree_begin;
+    uint64_t devicetree_end;
     struct reserved_memory reserve[32];
 };
 
@@ -67,7 +68,8 @@ static void setup_boot_info(
             boot->reserve[i].type = KERNEL_IMAGE;
         } else if (strcmp(data[i].name, "dtb") == 0) {
             boot->reserve[i].type = DEVICE_TREE;
-            boot->devicetree = data[i].begin;
+            boot->devicetree_begin = data[i].begin;
+            boot->devicetree_end = data[i].end;
         }
     }
 }
