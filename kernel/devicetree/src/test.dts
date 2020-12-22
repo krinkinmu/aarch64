@@ -1,0 +1,24 @@
+/dts-v1/;
+/memreserve/ 0x40000000 0x1000;
+/memreserve/ 0x40002000 0x1000;
+/memreserve/ 0x40004000 0x1000;
+/ {
+	#size-cells = <0x02>;
+	#address-cells = <0x02>;
+
+	memory@40000000 {
+		reg = <0x00 0x40000000 0x00 0x8000000>;
+		device_type = "memory";
+	};
+
+	cpus {
+		#size-cells = <0x00>;
+		#address-cells = <0x01>;
+
+		cpu@0 {
+			reg = <0x00>;
+			compatible = "arm,cortex-a57";
+			device_type = "cpu";
+		};
+	};
+};
