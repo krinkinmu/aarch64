@@ -3,16 +3,21 @@ export AR := llvm-ar
 export LD := lld
 
 export CFLAGS := \
-	-ffreestanding -MMD -mno-red-zone -std=c11 \
-	-target aarch64-unknown-none -Wall -Werror -pedantic
-export LDFLAGS := \
-	-flavor ld -e main -m aarch64elf
+	-ffreestanding -MMD -mno-red-zone -std=c11 -Ofast \
+	-fPIE -target aarch64-unknown-none -Wall -Werror -pedantic
+
+LDFLAGS := \
+	-flavor ld -m aarch64elf \
+	--pie --static --nostdlib --script=kernel.lds
+CARGO_TARGET := \
+	-Zbuild-std -Zbuild-std-features=compiler-builtins-mem \
+	--target=$(shell pwd)/aarch64-unknown-custom.json
 
 default: all
 
 libkernel.a:
-	cd kernel ; cargo build --release --target=aarch64-unknown-none ; cd -
-	cp kernel/target/aarch64-unknown-none/release/libkernel.a $@
+	cd kernel ; cargo build $(CARGO_TARGET) --release ; cd -
+	cp kernel/target/aarch64-unknown-custom/release/libkernel.a $@
 
 libbootstrap.a:
 	$(MAKE) -C bootstrap
