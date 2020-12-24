@@ -1,6 +1,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "alloc.h"
+#include "config.h"
 #include "pl011.h"
 
 
@@ -11,37 +13,6 @@ struct data {
     const char *name;
     uint64_t begin;
     uint64_t end;
-};
-
-enum reserve_type {
-    INVALID = 0x0,
-    // For anything that doesn't fit one of the defined purposes before we can
-    // use UNKNOWN
-    UNKNOWN = 0x1,
-    // Memory occupied by the kernel image itself.
-    KERNEL_IMAGE = 0x2,
-    // Memory range occupied by the flattened device tree.
-    DEVICE_TREE = 0x3,
-};
-
-// This structure describes a reserved range of memory that cannot be allocated
-// for any other use. For example, the memory where the kernel image lives
-// cannot be reused for anything else, otherwise we can overwrite the actual
-// kernel data and/or code. We can also reserve some memory ranges for other
-// reasons.
-struct reserved_memory {
-    uint64_t type;
-    uint64_t begin;
-    uint64_t end;
-};
-
-// This is the structure that we pass to the actual kernel. The goal of the
-// bootstrap code is to combine information from various sources into this
-// structure to pass it to the kernel.
-struct boot_info {
-    uint64_t devicetree_begin;
-    uint64_t devicetree_end;
-    struct reserved_memory reserve[32];
 };
 
 static int strcmp(const char *l, const char *r)
@@ -56,30 +27,33 @@ static int strcmp(const char *l, const char *r)
     return 0;
 }
 
-static void setup_boot_info(
-    struct data *data, size_t size, struct boot_info *boot)
+static void reserve_ranges(const struct data *data, size_t size)
 {
     for (size_t i = 0; i < size; ++i) {
-        boot->reserve[i].begin = data[i].begin;
-        boot->reserve[i].end = data[i].end;
-        boot->reserve[i].type = UNKNOWN;
-
-        if (strcmp(data[i].name, "kernel") == 0) {
-            boot->reserve[i].type = KERNEL_IMAGE;
-        } else if (strcmp(data[i].name, "dtb") == 0) {
-            boot->reserve[i].type = DEVICE_TREE;
-            boot->devicetree_begin = data[i].begin;
-            boot->devicetree_end = data[i].end;
-        }
+        if (strcmp(data[i].name, "kernel") == 0)
+            reserve_range(data[i].begin, data[i].end, RESERVE_KERNEL);
+        else if (strcmp(data[i].name, "dts") == 0)
+            reserve_range(data[i].begin, data[i].end, RESERVE_DEVICETREE);
+        else
+            reserve_range(data[i].begin, data[i].end, RESERVE_OTHER);
     }
 }
 
-void start_kernel(struct boot_info *);
+void start_kernel(void);
+
+// I'm using this cont variable to pause the kernel early during the boot
+// process to have time to connect to QEMU with GDB for debugging. Just
+// set it to 0 and the system will hang in the infinite loop inside main.
+// To break the infinite loop, just write to the cont variable a non-zero
+// value using GDB memory write.
+static volatile int cont = 1;
 
 void main(struct data *data, size_t size)
 {
-    static struct boot_info boot;
     struct pl011 serial;
+    uint64_t heap_begin, heap_end;
+
+    while (!cont);
 
     // For HiKey960 board that I have the following parameters were found to
     // work fine:
@@ -90,16 +64,11 @@ void main(struct data *data, size_t size)
         &serial, /* base_address = */0x9000000, /* base_clock = */24000000);
     pl011_send(&serial, "Bootstraping...\n", sizeof("Bootstraping...\n"));
 
-    if (size > 32) {
-        pl011_send(
-            &serial,
-            "Too many reserved memory ranges\n",
-            sizeof("Too many reserved memory ranges\n"));
-        while (1);
-    }
-
-    setup_boot_info(data, size, &boot);
-    start_kernel(&boot);
+    bootstrap_allocator_setup();
+    reserve_ranges(data, size);
+    bootstrap_heap(&heap_begin, &heap_end);
+    bootstrap_allocator_add_range(heap_begin, heap_end);
+    start_kernel();
 
     while (1);
 }

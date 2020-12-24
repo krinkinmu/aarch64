@@ -1,39 +1,16 @@
 #![no_std]
+#[macro_use]
+extern crate alloc;
+extern crate memalloc;
 extern crate runtime;
 
-use core::slice;
-use devicetree::DeviceTree;
+use bootstrap::ReservedRange;
+use bootstrap;
+use alloc::vec::Vec;
 use pl011::PL011;
 
-#[repr(C)]
-struct ReservedMemory {
-    memory_type: u64,
-    begin: u64,
-    end: u64,
-}
-
-#[repr(C)]
-pub struct BootInfo {
-    devicetree_begin: u64,
-    devicetree_end: u64,
-    reserve: [ReservedMemory; 32],
-}
-
-fn get_device_tree(boot_info: &BootInfo) -> DeviceTree {
-    let addr = boot_info.devicetree_begin;
-    let size = boot_info.devicetree_end - boot_info.devicetree_begin;
-
-    unsafe {
-        let data = slice::from_raw_parts(addr as *const u8, size as usize);
-
-        DeviceTree::new(data).unwrap()
-    }
-}
-
 #[no_mangle]
-pub extern "C" fn start_kernel(boot_info: &'static BootInfo) {
-    let _dt = get_device_tree(boot_info);
-
+pub extern "C" fn start_kernel() {
     // For HiKey960 board that I have the following parameters were found to
     // work fine:
     //
@@ -45,5 +22,18 @@ pub extern "C" fn start_kernel(boot_info: &'static BootInfo) {
         /* base_clock = */24000000);
     serial.send("Hello from Rust\n");
 
-    loop {}
+    loop {
+        let mut ranges: Vec<ReservedRange> = Vec::new();
+        serial.send("Before\n");
+        let msg = format!("haba-haba\n");
+        serial.send("After\n");
+
+        for range in bootstrap::reserved_range_iter() {
+            ranges.push(range);
+        }
+
+        for _range in ranges {
+            serial.send(msg.as_str());
+        }
+    }
 }

@@ -9,6 +9,8 @@ name = "kernel"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
+bootstrap = { path = "../bootstrap" }
 devicetree = { path = "../devicetree" }
+memalloc = { path = "../memalloc" }
 pl011 = { path = "../pl011" }
 runtime = { path = "../runtime" }

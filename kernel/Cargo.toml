@@ -1,7 +1,9 @@
 [workspace]
 members = [
+    "bootstrap",
     "devicetree",
     "kernel",
+    "memalloc",
     "pl011",
     "runtime",
 ]
