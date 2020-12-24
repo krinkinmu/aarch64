@@ -12,7 +12,7 @@ default: all
 %.o: %.s
 	$(CC) -fPIE -target aarch64-unknown-none -Wall -Werror -c $< -o $@
 
-libbootstrap.a: main.o pl011.o relocate.o start.o
+libbootstrap.a: main.o pl011.o alloc.o relocate.o start.o
 	$(AR) rc $@ $^
 
 -include $(SRCS:.c=.d)
