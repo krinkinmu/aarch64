@@ -1,5 +1,5 @@
-#ifndef __PL011_H__
-#define __PL011_H__
+#ifndef __BOOTSTRAP_PL011_H__
+#define __BOOTSTRAP_PL011_H__
 
 #include <stddef.h>
 #include <stdint.h>
@@ -41,4 +41,4 @@ int pl011_reset(const struct pl011 *dev);
 // Returns 0 on success.
 int pl011_send(const struct pl011 *dev, const char *data, size_t size);
 
-#endif  // __PL011_H__
+#endif  // __BOOTSTRAP_PL011_H__
