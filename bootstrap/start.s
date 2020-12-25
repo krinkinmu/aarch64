@@ -2,10 +2,6 @@
 .global start
 .extern main, relocate_kernel
 
-// Registers r0 and r1 contain arguments passed from the loader, so we want
-// to preserve them until wil call to the main. We also don't need to care
-// about preserving anything else, since start is the first function of the
-// program and there is no place for it to return to.
 start:
     // Registers r0 and r1 contain arguments passed from the loader, so we
     // need to make sure that those are preserved until we call into main.
