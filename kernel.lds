@@ -28,6 +28,12 @@ SECTIONS
         _RODATA_END = .;
     } :rodata
 
+    .data.rel.ro : {
+        _RELRO_BEGIN = .;
+        *(.data.rel.ro)
+        _RELRO_END = .;
+    } :rodata
+
     .rela.dyn : {
         _RELA_BEGIN = .;
         *(.rela.dyn)
