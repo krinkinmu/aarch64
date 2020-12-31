@@ -3,6 +3,10 @@
 .extern main, relocate_kernel
 
 start:
+    // Mask IRQ and FIQ interrupts, so that execution will not be interrupted
+    // by any external device that we can't know about yet.
+    msr daifset, #0b0011
+
     // Registers r0 and r1 contain arguments passed from the loader, so we
     // need to make sure that those are preserved until we call into main.
     // According to the aarch64 calling conventions register r19-r28 must be
