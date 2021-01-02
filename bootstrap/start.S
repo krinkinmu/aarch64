@@ -51,6 +51,8 @@ start:
     //  - non-secure EL2
     //  - MMU is off
     //  - all interrupts are masked
+    //  - SPSel = 1, so each EL has a dedicated SP register
+    //  - ISR vector table is initialized with a custom value
     //
     // For all other paramters that we want to configure I will update this
     // comment when they become important.
