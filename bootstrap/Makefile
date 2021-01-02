@@ -9,10 +9,10 @@ default: all
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.s
+%.o: %.S
 	$(CC) -fPIE -target aarch64-unknown-none -Wall -Werror -c $< -o $@
 
-libbootstrap.a: main.o pl011.o alloc.o config.o relocate.o start.o
+libbootstrap.a: main.o pl011.o alloc.o config.o relocate.o start.o ints.o
 	$(AR) rc $@ $^
 
 -include $(SRCS:.c=.d)
