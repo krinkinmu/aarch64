@@ -159,7 +159,8 @@ in_el2:
     // really expect to run in the known state here and need to repeat a bit
     // of setup here.
 
-    // Mask all the inpterrupts that we could possibly mask.
+    // Mask all the interrupts that we could possibly mask, we will unmask them
+    // when we are ready to handle them.
     msr DAIFSet, #0b1111
 
     // Install our own vector table to be able to catch whatever interrupts or
@@ -167,7 +168,7 @@ in_el2:
     // the only way our own interrupt handlers should be called is if we did
     // something wrong and that resulted in an exception that cannot be masked.
     // If that happens we will be able to debug it using out own handler.
-    ldr x0, vector_table
+    adr x0, vector_table
     msr VBAR_EL2, x0
 
     // Make sure that each EL uses a dedicated SP register and setup the SP
