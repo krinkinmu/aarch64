@@ -2,6 +2,7 @@
 members = [
     "bootstrap",
     "devicetree",
+    "interrupt",
     "kernel",
     "memalloc",
     "pl011",

@@ -1,0 +1,12 @@
+[package]
+name = "interrupt"
+version = "0.1.0"
+authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+pl011 = { path = "../pl011" }
+
+[lib]
+name = "interrupt"
+crate-type = ["rlib"]
