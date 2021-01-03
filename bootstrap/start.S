@@ -131,6 +131,14 @@ in_el3:
     // When 0 makes all instruction accesses to memory from EL2 to be
     // non-cacheable, we should use 1 to control cacheability more granularly
     #define SCTLR_EL2_I (1 << 12)
+    // When 1 makes loads and stores using SP value as a base generate an
+    // exception when SP is not aligned on 16-bytes boundary. Normally SP is
+    // always aligned and it should definitely be the case at least for the EL2
+    // code, but in general, when interrupt or exception happen the interrupted
+    // code might be in the middle of manipulations with SP that may leave it
+    // unaligned to the 16-byte boundary, so I'm disabling this check to handle
+    // this potential case.
+    #define SCTLR_EL2_SA (1 << 3)
     // When 0 makes all data accesses to memory from EL2 to be non-cacheable,
     // we should use 1 to control cacheability more granularly
     #define SCTLR_EL2_C (1 << 2)
@@ -139,6 +147,7 @@ in_el3:
     orr x0, x0, #(SCTLR_EL2_I)
     orr x0, x0, #(SCTLR_EL2_C)
     and x0, x0, #(~SCTLR_EL2_EE)
+    and x0, x0, #(~SCTLR_EL2_SA)
     and x0, x0, #(~SCTLR_EL2_M)
     msr SCTLR_EL2, x0
 
@@ -203,6 +212,7 @@ in_el2:
     orr x0, x0, #(SCTLR_EL2_I)
     orr x0, x0, #(SCTLR_EL2_C)
     and x0, x0, #(~SCTLR_EL2_EE)
+    and x0, x0, #(~SCTLR_EL2_SA)
     and x0, x0, #(~SCTLR_EL2_M)
     msr SCTLR_EL2, x0
 
