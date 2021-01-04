@@ -118,7 +118,7 @@ in_el3:
     // Register ELR_EL3 is supposed to store an address where eret should
     // pass control to, thus we need to initialize it with the address of the
     // place where we want to jump.
-    ldr x0, in_el2
+    adr x0, in_el2
     msr ELR_EL3, x0
 
     // Register SCTLR_EL2 control the execution on the EL2 including the
