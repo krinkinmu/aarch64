@@ -1,5 +1,6 @@
 #![no_std]
 extern crate alloc;
+extern crate devicetree;
 extern crate interrupt;
 extern crate memalloc;
 extern crate runtime;
