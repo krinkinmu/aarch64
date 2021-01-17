@@ -109,7 +109,7 @@ fn parse_nodes(structs: &[u8], strings: &[u8])
     loop {
         match scanner.consume_be32() {
             Ok(token) if token == FDT_BEGIN_NODE => {
-                state.begin_node(scanner.consume_cstr()?)?;
+                state.begin_node(scanner.consume_cstr()?);
                 scanner.align_forward(4)?;
             },
             Ok(token) if token == FDT_END_NODE => {
@@ -120,13 +120,11 @@ fn parse_nodes(structs: &[u8], strings: &[u8])
                 let off = scanner.consume_be32()? as usize;
                 let value = scanner.consume_data(len)?;
                 let name = Scanner::new(&strings[off..]).consume_cstr()?;
-                state.new_property(name, value)?;
+                state.new_property(name, value);
                 scanner.align_forward(4)?;
             },
-            Ok(token) if token == FDT_END => {
-                return state.finish();
-            },
             Ok(token) if token == FDT_NOP => {},
+            Ok(token) if token == FDT_END => return state.finish(),
             Err(msg) => return Err(msg),
             _ => return Err("Unknown FDT token."),
         }
@@ -146,10 +144,9 @@ impl<'a> State<'a> {
         }
     }
 
-    fn begin_node(&mut self, name: &'a str) -> Result<(), &'static str> {
+    fn begin_node(&mut self, name: &'a str) {
         let node = mem::replace(&mut self.current, DeviceTreeNode::new());
         self.parents.push((name, node));
-        Ok(())
     }
 
     fn end_node(&mut self) -> Result<(), &'static str> {
@@ -161,10 +158,8 @@ impl<'a> State<'a> {
         Err("Unmatched end of node token found in FDT.")
     }
 
-    fn new_property(&mut self, name: &str, value: &[u8])
-            -> Result<(), &'static str> {
+    fn new_property(&mut self, name: &str, value: &[u8]) {
         self.current.add_property(String::from(name), Vec::from(value));
-        Ok(())
     }
 
     fn finish(&mut self) -> Result<DeviceTreeNode, &'static str> {
@@ -190,9 +185,9 @@ mod tests {
         assert_eq!(
             dt.reserved_memory(),
             vec![
-                ReservedMemory{addr: 0x40000000, size: 0x1000},
-                ReservedMemory{addr: 0x40002000, size: 0x1000},
-                ReservedMemory{addr: 0x40004000, size: 0x1000}]);
+                ReservedMemory{ addr: 0x40000000, size: 0x1000 },
+                ReservedMemory{ addr: 0x40002000, size: 0x1000 },
+                ReservedMemory{ addr: 0x40004000, size: 0x1000 }]);
 
         assert_eq!(
             dt.follow("/").unwrap().property("#size-cells"),

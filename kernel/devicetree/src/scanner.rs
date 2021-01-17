@@ -2,7 +2,6 @@ use core::convert::TryFrom;
 use core::result::Result;
 use core::str;
 
-#[derive(Copy, Clone)]
 pub struct Scanner<'a> {
     data: &'a [u8],
     offset: usize,
@@ -84,7 +83,7 @@ impl<'a> Scanner<'a> {
         let shift = alignment - self.offset % alignment;
 
         if self.offset + shift >= self.data.len() {
-            return Err("Not enough data")
+            return Err("Not enough data");
         }
 
         self.offset += shift;
