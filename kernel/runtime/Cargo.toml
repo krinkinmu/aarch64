@@ -7,3 +7,6 @@ edition = "2018"
 [lib]
 name = "runtime"
 crate-type = ["rlib"]
+
+[dependencies]
+bootstrap = { path = "../bootstrap" }

@@ -12,6 +12,6 @@ crate-type = ["staticlib", "rlib"]
 bootstrap = { path = "../bootstrap" }
 devicetree = { path = "../devicetree" }
 interrupt = { path = "../interrupt" }
-memalloc = { path = "../memalloc" }
+memory = { path = "../memory" }
 pl011 = { path = "../pl011" }
 runtime = { path = "../runtime" }

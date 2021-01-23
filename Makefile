@@ -33,6 +33,7 @@ all: kernel.elf
 test:
 	cd kernel/pl011 ; cargo test ; cd -
 	cd kernel/devicetree ; cargo test ; cd -
+	cd kernel/memory ; cargo test ; cd -
 
 clean:
 	cd kernel ; cargo clean ; cd -

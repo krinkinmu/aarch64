@@ -2,7 +2,7 @@
 extern crate alloc;
 extern crate devicetree;
 extern crate interrupt;
-extern crate memalloc;
+extern crate memory;
 extern crate runtime;
 
 use pl011::PL011;

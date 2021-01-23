@@ -4,7 +4,7 @@ members = [
     "devicetree",
     "interrupt",
     "kernel",
-    "memalloc",
+    "memory",
     "pl011",
     "runtime",
 ]
