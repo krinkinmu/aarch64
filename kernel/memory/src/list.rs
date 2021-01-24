@@ -1,89 +1,69 @@
-use core::assert;
 use core::default::Default;
-use core::ptr;
-
-#[repr(C)]
-pub struct ListLink {
-    next: *mut ListLink,
-    prev: *mut ListLink,
-}
-
-impl ListLink {
-    pub fn new() -> ListLink {
-        ListLink {
-            next: ptr::null_mut(),
-            prev: ptr::null_mut(),
-        }
-    }
-}
-
-impl Default for ListLink {
-    fn default() -> ListLink {
-        ListLink::new()
-    }
-}
+use crate::page::{NULL_PAGE, PageRange};
 
 pub struct List {
-    head: *mut ListLink,
+    head: usize,
 }
 
 impl List {
     pub fn new() -> List {
-        List { head: ptr::null_mut() }
+        List { head: NULL_PAGE }
     }
 
-    pub fn push(&mut self, link: *mut ListLink) {
-        assert!(!link.is_null());
-        unsafe {
-            let next = self.head;
+    pub fn is_empty(&self) -> bool {
+        self.head == NULL_PAGE
+    }
 
-            (*link).next = next;
-            (*link).prev = ptr::null_mut();
+    pub fn push(&mut self, range: &PageRange, index: usize) {
+        assert_ne!(index, NULL_PAGE);
+        let page = range.page(index);
+        let next = self.head;
 
-            self.head = link;
-            if !next.is_null() {
-                (*next).prev = link;
-            }
+        page.next.set(next);
+        page.prev.set(NULL_PAGE);
+        self.head = index;
+
+        if next != NULL_PAGE {
+            range.page(next).prev.set(index);
         }
     }
 
-    pub fn pop(&mut self) -> Option<*mut ListLink> {
-        if self.head.is_null() {
-            None
-        } else {
-            unsafe {
-                let link = self.head;
-                let next = (*link).next;
-
-                self.head = next;
-                if !next.is_null() {
-                    (*next).prev = ptr::null_mut();
-                }
-                (*link).next = ptr::null_mut();
-                (*link).prev = ptr::null_mut();
-                Some(link)
-            }
+    pub fn pop(&mut self, range: &PageRange) -> Option<usize> {
+        if self.head == NULL_PAGE {
+            return None;
         }
+
+        let page_index = self.head;
+        let page = range.page(page_index);
+        let next_index = page.next.get();
+
+        self.head = next_index;
+        if next_index != NULL_PAGE {
+            range.page(next_index).prev.set(NULL_PAGE);
+        }
+
+        page.prev.set(NULL_PAGE);
+        page.next.set(NULL_PAGE);
+        Some(page_index)
     }
 
-    pub fn remove(&mut self, link: *mut ListLink) {
-        assert!(!link.is_null());
-        unsafe {
-            let prev = (*link).prev;
-            let next = (*link).next;
+    pub fn remove(&mut self, range: &PageRange, index: usize) {
+        assert_ne!(index, NULL_PAGE);
+        let page = range.page(index);
+        let prev_index = page.prev.get();
+        let next_index = page.next.get();
 
-            if !prev.is_null() {
-                (*prev).next = next;
-            }
-            if !next.is_null() {
-                (*next).prev = prev;
-            }
-            if link == self.head {
-                self.head = next;
-            }
-            (*link).next = ptr::null_mut();
-            (*link).prev = ptr::null_mut();
+        if prev_index != NULL_PAGE {
+            range.page(prev_index).next.set(next_index);
         }
+        if next_index != NULL_PAGE {
+            range.page(next_index).prev.set(prev_index);
+        }
+        if self.head == index {
+            self.head = next_index;
+        }
+        page.prev.set(NULL_PAGE);
+        page.next.set(NULL_PAGE);
     }
 }
 
@@ -96,77 +76,103 @@ impl Default for List {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::page::Page;
+
+    #[test]
+    fn test_new() {
+        let l = List::new();
+        assert_eq!(l.head, NULL_PAGE);
+    }
+
+    #[test]
+    fn test_is_empty() {
+        let pages = vec![Page::new(), Page::new(), Page::new()];
+        let range = PageRange::new(pages.as_slice(), 1);
+        let mut l = List::new();
+
+        assert!(l.is_empty());
+        l.push(&range, 1);
+        assert!(!l.is_empty());
+        l.push(&range, 2);
+        assert!(!l.is_empty());
+        l.push(&range, 3);
+        assert!(!l.is_empty());
+    }
 
     #[test]
     fn test_push_pop() {
+        let pages = vec![Page::new(), Page::new(), Page::new()];
+        let range = PageRange::new(pages.as_slice(), 1);
         let mut l = List::new();
-        let mut n1 = ListLink::new();
-        let mut n2 = ListLink::new();
-        let mut n3 = ListLink::new();
 
-        assert_eq!(l.pop(), None);
-        l.push(&mut n1 as *mut ListLink);
-        l.push(&mut n2 as *mut ListLink);
-        l.push(&mut n3 as *mut ListLink);
-        assert_eq!(l.pop(), Some(&mut n3 as *mut ListLink));
-        assert!(n3.prev.is_null() && n3.next.is_null());
-        assert_eq!(l.pop(), Some(&mut n2 as *mut ListLink));
-        assert!(n2.prev.is_null() && n2.next.is_null());
-        assert_eq!(l.pop(), Some(&mut n1 as *mut ListLink));
-        assert!(n1.prev.is_null() && n1.next.is_null());
-        assert_eq!(l.pop(), None);
-        assert!(l.head.is_null());
+        assert_eq!(l.head, NULL_PAGE);
+        assert_eq!(l.pop(&range), None);
+        l.push(&range, 1);
+        l.push(&range, 2);
+        l.push(&range, 3);
+        assert_eq!(l.pop(&range), Some(3));
+        assert_eq!(range.page(3).next.get(), NULL_PAGE);
+        assert_eq!(range.page(3).prev.get(), NULL_PAGE);
+        assert_eq!(l.pop(&range), Some(2));
+        assert_eq!(range.page(2).next.get(), NULL_PAGE);
+        assert_eq!(range.page(2).prev.get(), NULL_PAGE);
+        assert_eq!(l.pop(&range), Some(1));
+        assert_eq!(range.page(1).next.get(), NULL_PAGE);
+        assert_eq!(range.page(1).prev.get(), NULL_PAGE);
+        assert_eq!(l.pop(&range), None);
+        assert_eq!(l.head, NULL_PAGE);
     }
 
     #[test]
     fn test_remove() {
+        let pages = vec![Page::new(), Page::new(), Page::new()];
+        let range = PageRange::new(pages.as_slice(), 1);
         let mut l = List::new();
-        let mut n1 = ListLink::new();
-        let mut n2 = ListLink::new();
-        let mut n3 = ListLink::new();
 
         {
-            l.push(&mut n1 as *mut ListLink);
-            l.push(&mut n2 as *mut ListLink);
-            l.push(&mut n3 as *mut ListLink);
-
-            l.remove(&mut n1 as *mut ListLink);
-            assert!(n1.prev.is_null() && n1.next.is_null());
-            assert_eq!(l.pop(), Some(&mut n3 as *mut ListLink));
-            assert_eq!(l.pop(), Some(&mut n2 as *mut ListLink));
-            assert_eq!(l.pop(), None);
-            assert!(l.head.is_null());
+            l.push(&range, 1);
+            l.push(&range, 2);
+            l.push(&range, 3);
+            l.remove(&range, 1);
+            assert_eq!(range.page(1).next.get(), NULL_PAGE);
+            assert_eq!(range.page(1).prev.get(), NULL_PAGE);
+            assert_eq!(l.pop(&range), Some(3));
+            assert_eq!(l.pop(&range), Some(2));
+            assert_eq!(l.pop(&range), None);
+            assert_eq!(l.head, NULL_PAGE);
         }
         {
-            l.push(&mut n1 as *mut ListLink);
-            l.push(&mut n2 as *mut ListLink);
-            l.push(&mut n3 as *mut ListLink);
-
-            l.remove(&mut n2 as *mut ListLink);
-            assert!(n2.prev.is_null() && n2.next.is_null());
-            assert_eq!(l.pop(), Some(&mut n3 as *mut ListLink));
-            assert_eq!(l.pop(), Some(&mut n1 as *mut ListLink));
-            assert_eq!(l.pop(), None);
-            assert!(l.head.is_null());
+            l.push(&range, 1);
+            l.push(&range, 2);
+            l.push(&range, 3);
+            l.remove(&range, 2);
+            assert_eq!(range.page(2).next.get(), NULL_PAGE);
+            assert_eq!(range.page(2).prev.get(), NULL_PAGE);
+            assert_eq!(l.pop(&range), Some(3));
+            assert_eq!(l.pop(&range), Some(1));
+            assert_eq!(l.pop(&range), None);
+            assert_eq!(l.head, NULL_PAGE);
         }
         {
-            l.push(&mut n1 as *mut ListLink);
-            l.push(&mut n2 as *mut ListLink);
-            l.push(&mut n3 as *mut ListLink);
-
-            l.remove(&mut n3 as *mut ListLink);
-            assert!(n3.prev.is_null() && n3.next.is_null());
-            assert_eq!(l.pop(), Some(&mut n2 as *mut ListLink));
-            assert_eq!(l.pop(), Some(&mut n1 as *mut ListLink));
-            assert_eq!(l.pop(), None);
-            assert!(l.head.is_null());
+            l.push(&range, 1);
+            l.push(&range, 2);
+            l.push(&range, 3);
+            l.remove(&range, 3);
+            assert_eq!(range.page(3).next.get(), NULL_PAGE);
+            assert_eq!(range.page(3).prev.get(), NULL_PAGE);
+            assert_eq!(l.head, 2);
+            assert_eq!(l.pop(&range), Some(2));
+            assert_eq!(l.pop(&range), Some(1));
+            assert_eq!(l.pop(&range), None);
+            assert_eq!(l.head, NULL_PAGE);
         }
         {
-            l.push(&mut n1 as *mut ListLink);
-            l.remove(&mut n1 as *mut ListLink);
-            assert!(n1.prev.is_null() && n1.next.is_null());
-            assert_eq!(l.pop(), None);
-            assert!(l.head.is_null());
+            l.push(&range, 1);
+            l.remove(&range, 1);
+            assert_eq!(range.page(1).next.get(), NULL_PAGE);
+            assert_eq!(range.page(1).prev.get(), NULL_PAGE);
+            assert_eq!(l.pop(&range), None);
+            assert_eq!(l.head, NULL_PAGE);
         }
     }
 }
