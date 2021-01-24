@@ -12,11 +12,12 @@ const LEVEL_MASK: u64 = 0x0ff;
 const FREE_MASK: u64 = 0x100;
 
 impl Page {
-    pub const fn new() -> Page {
+    #[cfg(test)]
+    pub fn new() -> Page {
         Page {
-            next: Cell::new(NULL_PAGE),
-            prev: Cell::new(NULL_PAGE),
-            state: Cell::new(0u64),
+            next: Cell::new(0),
+            prev: Cell::new(0),
+            state: Cell::new(0),
         }
     }
 
@@ -60,28 +61,15 @@ impl<'a> PageRange<'a> {
         &self.pages[index - self.offset]
     }
 
-    pub fn index(&self, page: &Page) -> usize {
-        if !self.contains_page(page) {
-            panic!();
-        }
-        let shift = unsafe {
-            (page as *const Page).offset_from(self.pages.as_ptr()) as usize
-        };
-        self.offset + shift
-    }
-
     pub fn contains_index(&self, index: usize) -> bool {
         index >= self.offset && index < self.offset + self.pages.len()
-    }
-
-    pub fn contains_page(&self, page: &Page) -> bool {
-        self.pages.as_ptr_range().contains(&(page as *const Page))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::intrinsics;
 
     #[test]
     fn test_page_new() {
@@ -121,31 +109,6 @@ mod tests {
     }
 
     #[test]
-    fn test_contains_page() {
-        let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 42);
-        let dummy = Page::new();
-
-        assert!(range.contains_page(&pages[0]));
-        assert!(range.contains_page(range.page(42)));
-        assert!(range.contains_page(&pages[1]));
-        assert!(range.contains_page(range.page(43)));
-        assert!(range.contains_page(&pages[2]));
-        assert!(range.contains_page(range.page(44)));
-        assert!(!range.contains_page(&dummy));
-    }
-
-    #[test]
-    fn test_index() {
-        let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 42);
-
-        assert_eq!(range.index(&pages[0]), 42);
-        assert_eq!(range.index(&pages[1]), 43);
-        assert_eq!(range.index(&pages[2]), 44);
-    }
-
-    #[test]
     fn test_page() {
         let pages = vec![Page::new(), Page::new(), Page::new()];
         let range = PageRange::new(pages.as_slice(), 42);
@@ -159,5 +122,10 @@ mod tests {
         assert_eq!(&pages[2] as *const Page, range.page(44) as *const Page);
         range.page(44).set_level(42);
         assert_eq!(range.page(44).level(), 42);
+    }
+
+    #[test]
+    fn test_zero_initialization() {
+        unsafe { intrinsics::assert_zero_valid::<Page>(); }
     }
 }

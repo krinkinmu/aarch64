@@ -2,7 +2,7 @@ use core::default::Default;
 use crate::list::List;
 use crate::page::{Page, PageRange};
 
-const LEVELS: usize = 20;
+pub const LEVELS: usize = 20;
 
 pub struct BuddySystem {
     free: [List; LEVELS],

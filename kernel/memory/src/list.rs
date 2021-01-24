@@ -10,6 +10,7 @@ impl List {
         List { head: NULL_PAGE }
     }
 
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.head == NULL_PAGE
     }
