@@ -7,3 +7,7 @@ edition = "2018"
 [lib]
 name = "memory"
 crate-type = ["rlib"]
+
+[dependencies]
+numeric = { path = "../numeric" }
+sync = { path = "../sync" }
