@@ -1,8 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 extern crate alloc;
-
 mod scanner;
-mod fdt;
+pub mod fdt;
 
 use alloc::collections::btree_map::{BTreeMap, Iter};
 use alloc::string::String;
@@ -10,7 +9,6 @@ use alloc::vec::Vec;
 use core::iter::Iterator;
 use core::option::Option;
 
-pub use fdt::*;
 
 const DEVICE_TREE_SPEC_VERSION: u32 = 17;
 
@@ -183,7 +181,8 @@ mod tests {
         let root_node2 = DeviceTreeNode::new();
         let root_node1_node3 = DeviceTreeNode::new();
 
-        root_node1.add_child(String::from("node3"), root_node1_node3.clone());
+        root_node1.add_child(
+            String::from("node3"), root_node1_node3.clone());
         root.add_child(String::from("node1"), root_node1.clone());
         root.add_child(String::from("node2"), root_node2.clone());
 
