@@ -5,8 +5,10 @@ members = [
     "interrupt",
     "kernel",
     "memory",
+    "numeric",
     "pl011",
     "runtime",
+    "sync",
 ]
 
 [profile.dev]
