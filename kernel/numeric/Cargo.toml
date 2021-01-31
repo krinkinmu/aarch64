@@ -1,0 +1,9 @@
+[package]
+name = "numeric"
+version = "0.1.0"
+authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "numeric"
+crate-type = ["rlib"]
