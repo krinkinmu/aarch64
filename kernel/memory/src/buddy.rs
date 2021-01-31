@@ -15,9 +15,9 @@ impl BuddySystem {
         }
     }
 
-    pub fn allocate_pages(&mut self, range: &PageRange, order: usize)
-            -> Option<usize> {
-        for level in order..LEVELS {
+    pub fn allocate_pages(&mut self, range: &PageRange, order: u64)
+            -> Option<u64> {
+        for level in (order as usize)..LEVELS {
             if let Some(index) = self.free[level].pop(range) {
                 let page = range.page(index);
 
@@ -35,23 +35,24 @@ impl BuddySystem {
             &mut self,
             range: &PageRange,
             page: &Page,
-            index: usize,
-            order: usize) {
+            index: u64,
+            order: u64)
+    {
         for level in (order..page.level()).rev() {
             let buddy_index = BuddySystem::buddy_index(index, level);
             let buddy = range.page(buddy_index);
 
             buddy.set_level(level);
             buddy.set_free();
-            self.free[level].push(range, buddy_index);
+            self.free[level as usize].push(range, buddy_index);
         }
     }
 
-    pub fn free_pages(&mut self, range: &PageRange, index: usize) {
+    pub fn free_pages(&mut self, range: &PageRange, index: u64) {
         let page = range.page(index);
         let mut level = page.level();
 
-        while level < LEVELS - 1 {
+        while level < LEVELS as u64 - 1 {
             let buddy_index = BuddySystem::buddy_index(index, level);
 
             if !range.contains_index(buddy_index) {
@@ -63,16 +64,16 @@ impl BuddySystem {
                 break;
             }
 
-            self.free[level].remove(range, buddy_index);
+            self.free[level as usize].remove(range, buddy_index);
             level += 1;
         }
 
         page.set_free();
         page.set_level(level);
-        self.free[level].push(range, index);
+        self.free[level as usize].push(range, index);
     }
 
-    fn buddy_index(index: usize, order: usize) -> usize {
+    fn buddy_index(index: u64, order: u64) -> u64 {
         index ^ (1 << order)
     }
 }
@@ -148,15 +149,15 @@ mod tests {
         buddy.free_pages(&range, 8);
 
         let index = buddy.allocate_pages(&range, 1).unwrap();
-        assert_eq!(index & ((1usize << 1) - 1), 0usize);
+        assert_eq!(index & ((1 << 1) - 1), 0);
         buddy.free_pages(&range, index);
 
         let index = buddy.allocate_pages(&range, 2).unwrap();
-        assert_eq!(index & ((1usize << 2) - 1), 0usize);
+        assert_eq!(index & ((1 << 2) - 1), 0);
         buddy.free_pages(&range, index);
 
         let index = buddy.allocate_pages(&range, 3).unwrap();
-        assert_eq!(index & ((1usize << 3) - 1), 0usize);
+        assert_eq!(index & ((1 << 3) - 1), 0);
         buddy.free_pages(&range, index);
     }
 }

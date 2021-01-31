@@ -2,7 +2,7 @@ use core::default::Default;
 use crate::page::{NULL_PAGE, PageRange};
 
 pub struct List {
-    head: usize,
+    head: u64,
 }
 
 impl List {
@@ -15,7 +15,7 @@ impl List {
         self.head == NULL_PAGE
     }
 
-    pub fn push(&mut self, range: &PageRange, index: usize) {
+    pub fn push(&mut self, range: &PageRange, index: u64) {
         assert_ne!(index, NULL_PAGE);
         let page = range.page(index);
         let next = self.head;
@@ -29,7 +29,7 @@ impl List {
         }
     }
 
-    pub fn pop(&mut self, range: &PageRange) -> Option<usize> {
+    pub fn pop(&mut self, range: &PageRange) -> Option<u64> {
         if self.head == NULL_PAGE {
             return None;
         }
@@ -48,7 +48,7 @@ impl List {
         Some(page_index)
     }
 
-    pub fn remove(&mut self, range: &PageRange, index: usize) {
+    pub fn remove(&mut self, range: &PageRange, index: u64) {
         assert_ne!(index, NULL_PAGE);
         let page = range.page(index);
         let prev_index = page.prev.get();

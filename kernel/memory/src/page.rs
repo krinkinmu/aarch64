@@ -1,12 +1,12 @@
 use core::cell::Cell;
 
 pub struct Page {
-    pub next: Cell<usize>,
-    pub prev: Cell<usize>,
+    pub next: Cell<u64>,
+    pub prev: Cell<u64>,
     state: Cell<u64>,
 }
 
-pub const NULL_PAGE: usize = 0;
+pub const NULL_PAGE: u64 = 0;
 
 const LEVEL_MASK: u64 = 0x0ff;
 const FREE_MASK: u64 = 0x100;
@@ -21,13 +21,13 @@ impl Page {
         }
     }
 
-    pub fn level(&self) -> usize {
-        (self.state.get() & LEVEL_MASK) as usize
+    pub fn level(&self) -> u64 {
+        self.state.get() & LEVEL_MASK
     }
 
-    pub fn set_level(&self, level: usize) {
-        assert_eq!((level as u64) & !LEVEL_MASK, 0);
-        self.state.set((level as u64) | (self.state.get() & !LEVEL_MASK));
+    pub fn set_level(&self, level: u64) {
+        assert_eq!(level & !LEVEL_MASK, 0);
+        self.state.set(level | (self.state.get() & !LEVEL_MASK));
     }
 
     pub fn is_free(&self) -> bool {
@@ -45,24 +45,25 @@ impl Page {
 
 pub struct PageRange<'a> {
     pages: &'a [Page],
-    offset: usize,
+    offset: u64,
 }
 
 impl<'a> PageRange<'a> {
-    pub fn new(pages: &'a [Page], offset: usize) -> PageRange<'a> {
+    pub fn new(pages: &'a [Page], offset: u64) -> PageRange<'a> {
         PageRange { pages, offset }
     }
 
-    pub fn page(&self, index: usize) -> &Page {
+    pub fn page(&self, index: u64) -> &Page {
         if !self.contains_index(index) {
             panic!();
         }
 
-        &self.pages[index - self.offset]
+        &self.pages[(index - self.offset) as usize]
     }
 
-    pub fn contains_index(&self, index: usize) -> bool {
-        index >= self.offset && index < self.offset + self.pages.len()
+    pub fn contains_index(&self, index: u64) -> bool {
+        index >= self.offset
+            && index < self.offset + self.pages.len() as u64
     }
 }
 
