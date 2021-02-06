@@ -1,8 +1,7 @@
 #![no_std]
 #[macro_use]
 extern crate alloc;
-
-use pl011::PL011;
+extern crate log;
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -39,10 +38,7 @@ pub extern "C" fn interrupt(frame: *mut InterruptFrame) {
 }
 
 fn safe_interrupt(frame: &mut InterruptFrame) {
-    let serial = PL011::new(
-        /* base_address = */0x9000000,
-        /* base_clock = */24000000);
-    serial.send(format!("{:?}", frame).as_str());
+    log::log(format!("{:?}", frame).as_str());
 }
 
 #[no_mangle]
@@ -51,10 +47,7 @@ pub extern "C" fn exception(frame: *mut InterruptFrame) {
 }
 
 fn safe_exception(frame: &mut InterruptFrame) {
-    let serial = PL011::new(
-        /* base_address = */0x9000000,
-        /* base_clock = */24000000);
-    serial.send(format!("{:?}", frame).as_str());
+    log::log(format!("{:?}", frame).as_str());
     loop {}
 }
 
