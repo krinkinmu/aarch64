@@ -1,24 +1,21 @@
 #![no_std]
 extern crate alloc;
+extern crate bootstrap;
 extern crate devicetree;
 extern crate interrupt;
 extern crate memory;
+extern crate log;
+extern crate pl011;
 extern crate runtime;
+extern crate sync;
 
-use pl011::PL011;
+mod setup;
 
 #[no_mangle]
 pub extern "C" fn start_kernel() {
-    // For HiKey960 board that I have the following parameters were found to
-    // work fine:
-    //
-    // let serial = PL011::new(
-    //     /* base_address = */0xfff32000,
-    //     /* base_clock = */19200000);
-    let serial = PL011::new(
-        /* base_address = */0x9000000,
-        /* base_clock = */24000000);
-    serial.send("Hello from Rust\n");
-
+    setup::setup_logger();
+    let dt = devicetree::fdt::parse(bootstrap::fdt()).unwrap();
+    let _memory = setup::setup_memory(&dt);
+    log::log("Hello from Rust\n");
     loop {}
 }
