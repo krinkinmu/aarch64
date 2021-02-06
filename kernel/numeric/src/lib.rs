@@ -29,7 +29,7 @@ pub fn lsb(mut x: u64) -> u32 {
     if (x & 0x1) == 0 {
         r += 1;
     }
-    r
+    r + 1
 }
 
 pub fn msb(mut x: u64) -> u32 {
@@ -111,6 +111,19 @@ mod tests {
         assert_eq!(msb(6), 3);
         assert_eq!(msb(7), 3);
         assert_eq!(msb(8), 4);
+    }
+
+    #[test]
+    fn test_lsb() {
+        assert_eq!(lsb(0), u32::MAX);
+        assert_eq!(lsb(1), 1);
+        assert_eq!(lsb(2), 2);
+        assert_eq!(lsb(3), 1);
+        assert_eq!(lsb(4), 3);
+        assert_eq!(lsb(5), 1);
+        assert_eq!(lsb(6), 2);
+        assert_eq!(lsb(7), 1);
+        assert_eq!(lsb(8), 4);
     }
 
     #[test]
