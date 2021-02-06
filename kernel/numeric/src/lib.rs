@@ -5,7 +5,7 @@ pub fn lsb(mut x: u64) -> u32 {
         return u32::MAX;
     }
 
-    let mut r = 0;
+    let mut r = 1;
     if (x & 0xffffffff) == 0 {
         x >>= 32;
         r += 32;
@@ -29,7 +29,7 @@ pub fn lsb(mut x: u64) -> u32 {
     if (x & 0x1) == 0 {
         r += 1;
     }
-    r + 1
+    r
 }
 
 pub fn msb(mut x: u64) -> u32 {
