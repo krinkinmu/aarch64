@@ -1,19 +1,23 @@
 use core::cell::UnsafeCell;
+use core::marker::Sync;
 use core::ops::{Deref, DerefMut};
 
+#[derive(Debug)]
 pub struct Mutex<T> {
     data: UnsafeCell<T>,
 }
 
 impl<T> Mutex<T> {
-    pub fn new(data: T) -> Mutex<T> {
+    pub const fn new(data: T) -> Mutex<T> {
         Mutex { data: UnsafeCell::new(data) }
     }
 
-    pub fn lock(&self) -> Lock<'_, T> {
+    pub fn lock(&self) -> Lock<T> {
         unsafe { Lock::new(self) }
     }
 }
+
+unsafe impl<T> Sync for Mutex<T> {}
 
 pub struct Lock<'a, T> {
     mutex: &'a Mutex<T>,
