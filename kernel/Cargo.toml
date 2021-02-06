@@ -4,6 +4,7 @@ members = [
     "devicetree",
     "interrupt",
     "kernel",
+    "log",
     "memory",
     "numeric",
     "pl011",
