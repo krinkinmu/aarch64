@@ -10,3 +10,4 @@ crate-type = ["rlib"]
 
 [dependencies]
 bootstrap = { path = "../bootstrap" }
+log = { path = "../log" }

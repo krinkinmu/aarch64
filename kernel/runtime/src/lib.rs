@@ -1,14 +1,26 @@
 #![no_std]
 #![feature(alloc_error_handler)]
-use core::panic::PanicInfo;
+extern crate alloc;
+extern crate log;
 
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
+use alloc::format;
 use bootstrap;
 use core::alloc::{GlobalAlloc, Layout};
+use core::panic::PanicInfo;
+
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    if let Some(location) = info.location() {
+        log::log(
+            format!(
+                "panic in file '{}' at line {}\n",
+                location.file(),
+                location.line()).as_str());
+    }
+    log::log("panic!\n");
+    loop {}
+}
 
 struct CustomAllocator;
 
