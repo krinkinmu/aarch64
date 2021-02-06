@@ -31,7 +31,7 @@ static void reserve_ranges(const struct data *data, size_t size)
     for (size_t i = 0; i < size; ++i) {
         if (strcmp(data[i].name, "kernel") == 0)
             reserve_range(data[i].begin, data[i].end, RESERVE_KERNEL);
-        else if (strcmp(data[i].name, "dts") == 0)
+        else if (strcmp(data[i].name, "dtb") == 0)
             reserve_range(data[i].begin, data[i].end, RESERVE_DEVICETREE);
         else
             reserve_range(data[i].begin, data[i].end, RESERVE_OTHER);
