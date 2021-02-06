@@ -1,6 +1,7 @@
 use core::default::Default;
 use crate::page::{NULL_PAGE, PageRange};
 
+#[derive(Debug)]
 pub struct List {
     head: u64,
 }

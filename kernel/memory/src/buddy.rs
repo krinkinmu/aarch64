@@ -4,6 +4,7 @@ use crate::page::{Page, PageRange};
 
 pub const LEVELS: usize = 20;
 
+#[derive(Debug)]
 pub struct BuddySystem {
     free: [List; LEVELS],
 }

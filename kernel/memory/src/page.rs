@@ -1,5 +1,6 @@
 use core::cell::Cell;
 
+#[derive(Debug)]
 pub struct Page {
     pub next: Cell<u64>,
     pub prev: Cell<u64>,

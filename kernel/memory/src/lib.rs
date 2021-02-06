@@ -18,6 +18,7 @@ use page::{Page, PageRange};
 use sync::placeholder::Mutex;
 
 pub use memory_map::MemoryMap;
+pub use memory_map::MemoryType;
 
 struct Zone<'a> {
     range: PageRange<'a>,

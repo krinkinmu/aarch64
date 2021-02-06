@@ -35,7 +35,7 @@ pub struct ZoneIter<'a> {
     inner: Iter<'a, MemoryRange>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MemoryMap {
     memory: Vec<MemoryRange>,
     zones: Vec<MemoryRange>,
@@ -100,14 +100,16 @@ where
     lower_bound(seq, &mut cmp)..upper_bound(seq, &mut cmp)
 }
 
-fn replace<T>(seq: &mut Vec<T>, range: Range<usize>, item: T) {
+fn replace<T: Clone>(seq: &mut Vec<T>, range: Range<usize>, items: &[T]) {
     assert!(range.end <= seq.len());
     let smaller = range.start;
     let larger = seq.len() - range.end;
 
     seq.rotate_left(range.end);
     seq.truncate(smaller + larger);
-    seq.push(item);
+    for item in items {
+        seq.push(item.clone());
+    }
     seq.rotate_left(larger);
 }
 
@@ -123,9 +125,17 @@ fn add_memory(
         else { Ordering::Equal }
     };
 
+    let mut before = MemoryRange {
+        range: mem.range.start..mem.range.start,
+        memtype: mem.memtype,
+        status: mem.status,
+    };
+    let mut after = MemoryRange {
+        range: mem.range.end..mem.range.end,
+        memtype: mem.memtype,
+        status: mem.status,
+    };
     let pos = equal_range(&seq[..], cmp);
-    let mut start = mem.range.start;
-    let mut end = mem.range.end;
     for i in pos.clone() {
         if seq[i].memtype != mem.memtype {
             return Err("Memory types of overlapping ranges don't match.");
@@ -136,15 +146,23 @@ fn add_memory(
             return Err("Reserved memory cannot be freed.");
         }
 
-        start = cmp::min(start, seq[i].range.start);
-        end = cmp::max(end, seq[i].range.end);
+        if seq[i].range.start < mem.range.start {
+            before = MemoryRange {
+                range: seq[i].range.start..mem.range.start,
+                memtype: seq[i].memtype,
+                status: seq[i].status,
+            }
+        }
+        if seq[i].range.end > mem.range.end {
+            after = MemoryRange {
+                range: mem.range.end..seq[i].range.end,
+                memtype: seq[i].memtype,
+                status: seq[i].status,
+            }
+        }
     }
 
-    replace(seq, pos, MemoryRange {
-        range: start..end,
-        memtype: mem.memtype,
-        status: mem.status,
-    });
+    replace(seq, pos, &[before, mem, after]);
     compact(seq);
 
     Ok(())
@@ -246,7 +264,7 @@ impl MemoryMap {
             if from + size > to { continue; }
 
             return Some(MemoryRange {
-                range: from..to,
+                range: from..from + size,
                 memtype: mem.memtype,
                 status: mem.status,
             });
@@ -330,44 +348,84 @@ mod tests {
     #[test]
     fn test_replace() {
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 0..0, 0);
+        replace(&mut seq, 0..0, &[0]);
         assert_eq!(&seq[..], &[0, 0, 1, 2, 3, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 1..1, 0);
+        replace(&mut seq, 0..0, &[0, 0]);
+        assert_eq!(&seq[..], &[0, 0, 0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 1..1, &[0]);
         assert_eq!(&seq[..], &[0, 0, 1, 2, 3, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 2..2, 0);
+        replace(&mut seq, 1..1, &[1, 0]);
+        assert_eq!(&seq[..], &[0, 1, 0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 2..2, &[0]);
         assert_eq!(&seq[..], &[0, 1, 0, 2, 3, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 5..5, 0);
+        replace(&mut seq, 2..2, &[0, 0]);
+        assert_eq!(&seq[..], &[0, 1, 0, 0, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 5..5, &[0]);
         assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 0, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 6..6, 0);
+        replace(&mut seq, 5..5, &[0, 0]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 0, 0, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 6..6, &[0]);
         assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5, 0]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 0..2, 0);
+        replace(&mut seq, 6..6, &[0, 0]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5, 0, 0]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 0..2, &[0]);
         assert_eq!(&seq[..], &[0, 2, 3, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 1..3, 0);
+        replace(&mut seq, 0..2, &[0, 1]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 1..3, &[0]);
         assert_eq!(&seq[..], &[0, 0, 3, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 2..4, 0);
+        replace(&mut seq, 1..3, &[1, 2]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 2..4, &[0]);
         assert_eq!(&seq[..], &[0, 1, 0, 4, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 3..5, 0);
+        replace(&mut seq, 2..4, &[2, 3]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 3..5, &[0]);
         assert_eq!(&seq[..], &[0, 1, 2, 0, 5]);
 
         let mut seq = vec![0, 1, 2, 3, 4, 5];
-        replace(&mut seq, 4..6, 0);
+        replace(&mut seq, 3..5, &[3, 4]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 4..6, &[0]);
         assert_eq!(&seq[..], &[0, 1, 2, 3, 0]);
+
+        let mut seq = vec![0, 1, 2, 3, 4, 5];
+        replace(&mut seq, 4..6, &[4, 5]);
+        assert_eq!(&seq[..], &[0, 1, 2, 3, 4, 5]);
     }
 
     #[test]
@@ -542,6 +600,38 @@ mod tests {
             memtype: MemoryType::Regular,
             status: MemoryStatus::Reserved,
         }]);
+
+        let mut mem = Vec::new();
+
+        assert!(add_memory(&mut mem, MemoryRange {
+            range: 0..4,
+            memtype: MemoryType::Regular,
+            status: MemoryStatus::Free,
+        }).is_ok());
+        assert!(add_memory(&mut mem, MemoryRange {
+            range: 1..3,
+            memtype: MemoryType::Regular,
+            status: MemoryStatus::Reserved,
+        }).is_ok());
+        assert_eq!(
+            &mem[..],
+            &[
+                MemoryRange {
+                    range: 0..1,
+                    memtype: MemoryType::Regular,
+                    status: MemoryStatus::Free,
+                },
+                MemoryRange {
+                    range: 1..3,
+                    memtype: MemoryType::Regular,
+                    status: MemoryStatus::Reserved,
+                },
+                MemoryRange {
+                    range: 3..4,
+                    memtype: MemoryType::Regular,
+                    status: MemoryStatus::Free,
+                },
+            ]);
     }
 
     #[test]
