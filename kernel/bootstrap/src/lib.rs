@@ -1,5 +1,6 @@
 #![no_std]
 use core::iter::Iterator;
+use core::ops::Range;
 use core::ptr;
 use core::slice;
 use core::slice::Iter;
@@ -22,7 +23,7 @@ extern {
     fn bootstrap_free_aligned(ptr: *mut u8, size: usize, align: usize);
 }
 
-fn get_reserved_ranges() -> &'static [PackedReservedRange] {
+fn reserved_memory_ranges() -> &'static [PackedReservedRange] {
     unsafe {
         let mut ranges: *const PackedReservedRange = ptr::null();
         let mut size: u32 = 0;
@@ -34,51 +35,45 @@ fn get_reserved_ranges() -> &'static [PackedReservedRange] {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct ReservedRange {
-    pub begin: u64,
-    pub end: u64,
-}
-
 pub struct ReservedRangeIter {
     inner: Iter<'static, PackedReservedRange>,
 }
 
 impl Iterator for ReservedRangeIter {
-    type Item = ReservedRange;
+    type Item = Range<u64>;
 
-    fn next(&mut self) -> Option<ReservedRange> {
+    fn next(&mut self) -> Option<Range<u64>> {
         match self.inner.next() {
-            Some(range) => Some(ReservedRange {
-                begin: range.begin,
-                end: range.end,
-            }),
+            Some(range) => Some(range.begin..range.end),
             None => None,
         }
     }
 }
 
 pub fn reserved_range_iter() -> ReservedRangeIter {
-    ReservedRangeIter { inner: get_reserved_ranges().iter() }
+    ReservedRangeIter { inner: reserved_memory_ranges().iter() }
 }
 
-pub fn get_devicetree() -> &'static [u8] {
+pub fn fdt() -> &'static [u8] {
     unsafe {
         let mut begin: u64 = 0;
         let mut end: u64 = 0;
 
         devicetree(&mut begin as *mut u64, &mut end as *mut u64);
+        if begin == end {
+            return &[];
+        }
         slice::from_raw_parts(begin as *const u8, (end - begin) as usize)
     }
 }
 
-pub fn get_heap_boundaries() -> (u64, u64) {
+pub fn heap_range() -> Range<u64> {
     unsafe {
         let mut begin: u64 = 0;
         let mut end: u64 = 0;
 
         bootstrap_heap(&mut begin as *mut u64, &mut end as *mut u64);
-        (begin, end)
+        begin..end
     }
 }
 
