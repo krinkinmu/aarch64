@@ -1,5 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 extern crate alloc;
+extern crate log;
 mod scanner;
 pub mod fdt;
 
@@ -7,7 +8,9 @@ use alloc::collections::btree_map::{BTreeMap, Iter};
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::iter::Iterator;
+use core::ops::Range;
 use core::option::Option;
+pub use scanner::Scanner;
 
 
 const DEVICE_TREE_SPEC_VERSION: u32 = 17;
@@ -16,29 +19,43 @@ const DEVICE_TREE_SPEC_VERSION: u32 = 17;
 pub struct DeviceTreeNode {
     children: BTreeMap<String, DeviceTreeNode>,
     properties: BTreeMap<String, Vec<u8>>,
+    address_space: AddressSpace,
 }
 
 impl DeviceTreeNode {
+    pub fn address_space(&self) -> AddressSpace {
+        self.address_space
+    }
+
     pub fn child(&self, name: &str) -> Option<&DeviceTreeNode> {
         self.children.get(name)
     }
 
     pub fn children(&self) -> Children {
-        Children{ inner: self.children.iter() }
+        Children { inner: self.children.iter() }
     }
 
-    pub fn property(&self, name: &str) -> Option<&[u8]> {
-        self.properties.get(name).map(|v| v.as_slice())
+    pub fn property(&self, name: &str) -> Option<Scanner> {
+        self.properties.get(name).map(|v| Scanner::new(v.as_slice()))
     }
 
     pub fn properties(&self) -> Properties {
-        Properties{ inner: self.properties.iter() }
+        Properties { inner: self.properties.iter() }
     }
 
     fn new() -> DeviceTreeNode {
-        DeviceTreeNode{
+        DeviceTreeNode {
             children: BTreeMap::new(),
             properties: BTreeMap::new(),
+            address_space: AddressSpace { size_cells: 1, address_cells: 1 },
+        }
+    }
+
+    fn new_child(parent: &DeviceTreeNode) -> DeviceTreeNode {
+        DeviceTreeNode {
+            children: BTreeMap::new(),
+            properties: BTreeMap::new(),
+            address_space: parent.address_space(),
         }
     }
 
@@ -51,6 +68,14 @@ impl DeviceTreeNode {
     }
 
     fn add_property(&mut self, name: String, value: Vec<u8>) {
+        if name == "#size-cells" {
+            let mut s = Scanner::new(&value[..]);
+            self.address_space.size_cells = s.consume_be32().unwrap();
+        }
+        if name == "#address-cells" {
+            let mut s = Scanner::new(&value[..]);
+            self.address_space.address_cells = s.consume_be32().unwrap();
+        }
         self.properties.insert(name, value);
     }
 }
@@ -78,11 +103,11 @@ pub struct Properties<'a> {
 }
 
 impl<'a> Iterator for Properties<'a> {
-    type Item = (&'a str, &'a [u8]);
+    type Item = (&'a str, Scanner<'a>);
 
-    fn next(&mut self) -> Option<(&'a str, &'a [u8])> {
+    fn next(&mut self) -> Option<(&'a str, Scanner<'a>)> {
         if let Some((name, value)) = self.inner.next() {
-            Some((name.as_str(), value.as_slice()))
+            Some((name.as_str(), Scanner::new(value.as_slice())))
         } else {
             None
         }
@@ -90,29 +115,14 @@ impl<'a> Iterator for Properties<'a> {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ReservedMemory {
-    addr: u64,
-    size: u64,
+pub struct AddressSpace {
+    pub size_cells: u32,
+    pub address_cells: u32,
 }
-
-impl ReservedMemory {
-    pub fn begin(&self) -> u64 {
-        self.addr
-    }
-
-    pub fn end(&self) -> u64 {
-        self.addr + self.size
-    }
-
-    pub fn size(&self) -> u64 {
-        self.size
-    }
-}
-
 
 #[derive(Clone, Debug)]
 pub struct DeviceTree {
-    reserved: Vec<ReservedMemory>,
+    reserved: Vec<Range<u64>>,
     root: DeviceTreeNode,
     last_comp_version: u32,
     boot_cpuid_phys: u32,
@@ -120,14 +130,14 @@ pub struct DeviceTree {
 
 impl DeviceTree {
     pub fn new(
-            reserved: Vec<ReservedMemory>,
+            reserved: Vec<Range<u64>>,
             root: DeviceTreeNode,
             last_comp_version: u32,
             boot_cpuid_phys: u32) -> DeviceTree {
-        DeviceTree{ reserved, root, last_comp_version, boot_cpuid_phys }
+        DeviceTree { reserved, root, last_comp_version, boot_cpuid_phys }
     }
 
-    pub fn reserved_memory(&self) -> &[ReservedMemory] {
+    pub fn reserved_memory(&self) -> &[Range<u64>] {
         self.reserved.as_slice()
     }
 

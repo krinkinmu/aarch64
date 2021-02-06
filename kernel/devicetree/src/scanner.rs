@@ -1,6 +1,7 @@
 use core::convert::TryFrom;
 use core::result::Result;
 use core::str;
+use crate::AddressSpace;
 
 pub struct Scanner<'a> {
     data: &'a [u8],
@@ -10,6 +11,10 @@ pub struct Scanner<'a> {
 impl<'a> Scanner<'a> {
     pub fn new(data: &'a [u8]) -> Scanner<'a> {
         Scanner { data, offset: 0 }
+    }
+
+    pub fn remains(&self) -> usize {
+        self.data.len() - self.offset
     }
 
     pub fn consume_be32(&mut self) -> Result<u32, &'static str> {
@@ -42,6 +47,28 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    pub fn consume_address(&mut self, address_space: &AddressSpace)
+        -> Result<u64, &'static str>
+    {
+        match address_space.address_cells {
+            0 => Ok(0),
+            1 => self.consume_be32().map(|x| x as u64),
+            2 => self.consume_be64(),
+            _ => Err("Unsupported #address-cells value."),
+        }
+    }
+
+    pub fn consume_size(&mut self, address_space: &AddressSpace)
+        -> Result<u64, &'static str>
+    {
+        match address_space.size_cells {
+            0 => Ok(0),
+            1 => self.consume_be32().map(|x| x as u64),
+            2 => self.consume_be64(),
+            _ => Err("Unsupported #address-cells value."),
+        }
+    }
+
     pub fn consume_cstr(&mut self) -> Result<&'a str, &'static str> {
         for i in self.offset.. {
             if i >= self.data.len() {
@@ -63,7 +90,9 @@ impl<'a> Scanner<'a> {
         Err("Unreachable")
     }
 
-    pub fn consume_data(&mut self, size: usize) -> Result<&'a [u8], &'static str> {
+    pub fn consume_data(&mut self, size: usize)
+        -> Result<&'a [u8], &'static str>
+    {
         if self.offset + size > self.data.len() {
             return Err("Not enough data");
         }
@@ -75,7 +104,9 @@ impl<'a> Scanner<'a> {
         Ok(&self.data[begin..end])
     }
 
-    pub fn align_forward(&mut self, alignment: usize) -> Result<(), &'static str> {
+    pub fn align_forward(&mut self, alignment: usize)
+        -> Result<(), &'static str>
+    {
         if alignment == 0 || self.offset % alignment == 0 {
             return Ok(());
         }

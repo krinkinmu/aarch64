@@ -7,3 +7,6 @@ edition = "2018"
 [lib]
 name = "devicetree"
 crate-type = ["rlib"]
+
+[dependencies]
+log = { path = "../log" }

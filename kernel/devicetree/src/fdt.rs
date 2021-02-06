@@ -1,10 +1,10 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::mem;
+use core::ops::Range;
 use core::result::Result;
 
-use crate::{
-    DEVICE_TREE_SPEC_VERSION, DeviceTree, DeviceTreeNode, ReservedMemory};
+use crate::{DEVICE_TREE_SPEC_VERSION, DeviceTree, DeviceTreeNode};
 use crate::scanner::Scanner;
 
 #[derive(Clone, Copy, Debug)]
@@ -77,8 +77,7 @@ fn parse_header(fdt: &[u8]) -> Result<FDTHeader, &'static str> {
     })
 }
 
-fn parse_reserved(data: &[u8])
-        -> Result<Vec<ReservedMemory>, &'static str> {
+fn parse_reserved(data: &[u8]) -> Result<Vec<Range<u64>>, &'static str> {
     let mut scanner = Scanner::new(data);
     let mut reserved = Vec::new();
 
@@ -89,7 +88,7 @@ fn parse_reserved(data: &[u8])
         if addr == 0 && size == 0 {
             break;
         }
-        reserved.push(ReservedMemory{ addr, size });
+        reserved.push(addr..addr + size);
     }
 
     Ok(reserved)
@@ -145,8 +144,9 @@ impl<'a> State<'a> {
     }
 
     fn begin_node(&mut self, name: &'a str) {
-        let node = mem::replace(&mut self.current, DeviceTreeNode::new());
-        self.parents.push((name, node));
+        let child = DeviceTreeNode::new_child(&self.current);
+        let parent = mem::replace(&mut self.current, child);
+        self.parents.push((name, parent));
     }
 
     fn end_node(&mut self) -> Result<(), &'static str> {
@@ -185,36 +185,43 @@ mod tests {
         assert_eq!(
             dt.reserved_memory(),
             vec![
-                ReservedMemory{ addr: 0x40000000, size: 0x1000 },
-                ReservedMemory{ addr: 0x40002000, size: 0x1000 },
-                ReservedMemory{ addr: 0x40004000, size: 0x1000 }]);
+                0x40000000..0x40001000,
+                0x40002000..0x40003000,
+                0x40004000..0x40005000
+            ]);
 
         assert_eq!(
-            dt.follow("/").unwrap().property("#size-cells"),
-            Some(&[0x0u8, 0x0u8, 0x0u8, 0x02u8][..]));
+            dt.follow("/").unwrap()
+                .property("#size-cells").unwrap()
+                .consume_be32().unwrap(),
+            2);
         assert_eq!(
-            dt.follow("/").unwrap().property("#address-cells"),
-            Some(&[0x0u8, 0x0u8, 0x0u8, 0x02u8][..]));
+            dt.follow("/").unwrap()
+                .property("#address-cells").unwrap()
+                .consume_be32().unwrap(),
+            2);
 
         assert_eq!(
-            dt.follow("/memory@40000000").unwrap().property("device_type"),
-            Some("memory\0".as_bytes()));
-        assert_eq!(
-            dt.follow("/memory@40000000").unwrap().property("reg"),
-            Some(&[
-                 0x00u8, 0x00u8, 0x00u8, 0x00u8,
-                 0x40u8, 0x00u8, 0x00u8, 0x00u8,
-                 0x00u8, 0x00u8, 0x00u8, 0x00u8,
-                 0x08u8, 0x00u8, 0x00u8, 0x00u8][..]));
+            dt.follow("/memory@40000000").unwrap()
+                .property("device_type").unwrap()
+                .consume_cstr().unwrap(),
+            "memory");
 
-        assert_eq!(
-            dt.follow("/cpus/cpu@0").unwrap().property("reg"),
-            Some(&[0x00u8, 0x00u8, 0x00u8, 0x00u8][..]));
-        assert_eq!(
-            dt.follow("/cpus/cpu@0").unwrap().property("device_type"),
-            Some("cpu\0".as_bytes()));
-        assert_eq!(
-            dt.follow("/cpus/cpu@0").unwrap().property("compatible"),
-            Some("arm,cortex-a57\0".as_bytes()));
+        let mut p = dt.follow("/memory@40000000").unwrap()
+            .property("reg").unwrap();
+        assert_eq!(p.consume_be64().unwrap(), 0x40000000);
+        assert_eq!(p.consume_be64().unwrap(), 0x8000000);
+
+        let mut p = dt.follow("/cpus/cpu@0").unwrap()
+            .property("reg").unwrap();
+        assert_eq!(p.consume_be32().unwrap(), 0);
+
+        let mut p = dt.follow("/cpus/cpu@0").unwrap()
+            .property("device_type").unwrap();
+        assert_eq!(p.consume_cstr().unwrap(), "cpu");
+
+        let mut p = dt.follow("/cpus/cpu@0").unwrap()
+            .property("compatible").unwrap();
+        assert_eq!(p.consume_cstr().unwrap(), "arm,cortex-a57");
     }
 }
