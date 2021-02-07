@@ -1,7 +1,6 @@
 use core::cmp;
 use core::default::Default;
 use core::ops::Range;
-use core::ptr;
 use crate::list::List;
 use crate::page::Page;
 
@@ -9,7 +8,7 @@ pub const LEVELS: usize = 20;
 
 #[derive(Debug)]
 pub struct BuddySystem<'a> {
-    free: [List; LEVELS],
+    free: [List<'a>; LEVELS],
     pages: &'a [Page],
     offset: u64,
 }
@@ -27,9 +26,9 @@ impl<'a> BuddySystem<'a> {
         self.offset..self.offset + self.pages.len() as u64
     }
 
-    unsafe fn page_index(&self, page: *const Page) -> u64 {
-        assert_ne!(page, ptr::null());
-        self.offset + page.offset_from(self.pages.as_ptr()) as u64
+    unsafe fn page_index(&self, page: &Page) -> u64 {
+        self.offset + (page as *const Page).offset_from(
+            self.pages.as_ptr()) as u64
     }
 
     unsafe fn page_offset(&self, index: u64) -> usize {
@@ -54,9 +53,9 @@ impl<'a> BuddySystem<'a> {
     }
 
     unsafe fn split_and_return(
-        &mut self, page: *const Page, index: u64, order: usize)
+        &mut self, page: &Page, index: u64, order: usize)
     {
-        let from = (*page).level() as usize;
+        let from = page.level() as usize;
         let to = order;
 
         for level in (to..from).rev() {
@@ -65,7 +64,7 @@ impl<'a> BuddySystem<'a> {
 
             buddy.set_level(level as u64);
             buddy.set_free();
-            self.free[level].push(buddy as *const Page);
+            self.free[level].push(buddy);
         }
     }
 
@@ -91,7 +90,7 @@ impl<'a> BuddySystem<'a> {
             if !page.is_free() { break; }
             if page.level() as usize != level { break; }
 
-            self.free[level].remove(page as *const Page);
+            self.free[level].remove(page);
             index = cmp::min(index, buddy);
             level += 1;
         }
@@ -99,7 +98,7 @@ impl<'a> BuddySystem<'a> {
         let page = &self.pages[self.page_offset(index)];
         page.set_free();
         page.set_level(level as u64);
-        self.free[level].push(page as *const Page);
+        self.free[level].push(page);
     }
 
     fn buddy_index(index: u64, order: usize) -> u64 {
