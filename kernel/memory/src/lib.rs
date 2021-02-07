@@ -14,64 +14,58 @@ use core::ops::Range;
 use core::ptr;
 use core::slice;
 use numeric;
-use page::{Page, PageRange};
+use page::Page;
 use sync::placeholder::Mutex;
 
 pub use memory_map::MemoryMap;
 pub use memory_map::MemoryType;
 
 struct Zone<'a> {
-    range: PageRange<'a>,
-    freelist: Mutex<BuddySystem>,
+    freelist: Mutex<BuddySystem<'a>>,
     space: Range<u64>,
-    page_size: u64,
 }
 
 impl<'a> Zone<'a> {
-    fn new(pages: &'a [Page], space: Range<u64>, page_size: u64) -> Zone<'a> {
+    fn new(pages: &'a [Page], offset: u64) -> Zone<'a> {
         Zone {
-            range: PageRange::new(pages, space.start / page_size),
-            freelist: Mutex::new(BuddySystem::new()),
-            space,
-            page_size,
+            freelist: Mutex::new(BuddySystem::new(pages, offset)),
+            space: offset..offset + pages.len() as u64,
         }
     }
 
     fn allocate_pages(&self, order: u64) -> Option<u64> {
-        self.freelist.lock().allocate_pages(&self.range, order)
+        self.freelist.lock().allocate_pages(order)
     }
 
     fn free_pages(&self, page: u64) {
-        self.freelist.lock().free_pages(&self.range, page);
+        self.freelist.lock().free_pages(page);
     }
 
     unsafe fn free_pages_at_level(&self, page: u64, level: u64) {
-        assert_eq!(page & ((1u64 << level) - 1), 0);
-        self.range.page(page).set_level(level);
-        self.free_pages(page);
+        self.freelist.lock().free_pages_at_level(page, level);
     }
 
-    unsafe fn free_space(&self, mmap: &MemoryMap) {
-        for mem in mmap.free_memory_in_range(self.space.clone()) {
-            let mut start = numeric::align_up(
-                mem.range.start, self.page_size) / self.page_size;
-            let end = numeric::align_down(
-                mem.range.end, self.page_size) / self.page_size;
+    unsafe fn free_page_range(&self, range: &Range<u64>) {
+        let end = range.end;
+        let mut index = range.start;
 
-            while start < end {
-                let order = cmp::min(
-                    buddy::LEVELS as u32 - 1,
-                    cmp::min(
-                        numeric::ilog2(end - start),
-                        numeric::lsb(start) - 1)) as u64;
-                self.free_pages_at_level(start, order);
-                start += 1 << order;
-            }
+        while index < range.end {
+            let order = cmp::min(
+                buddy::LEVELS as u32 - 1,
+                cmp::min(
+                    numeric::ilog2(end - index),
+                    numeric::lsb(index) - 1)) as u64;
+            self.free_pages_at_level(index, order);
+            index += 1 << order;
         }
     }
 
+    fn page_range(&self) -> Range<u64> {
+        self.space.clone()
+    }
+
     fn contains(&self, page: u64) -> bool {
-        self.range.contains_index(page)
+        self.space.contains(&page)
     }
 }
 
@@ -91,8 +85,8 @@ impl<'a> Memory<'a> {
     }
 
     pub fn free_pages(&mut self, addr: u64) {
+        assert_eq!(addr & (self.page_size - 1), 0);
         let page = self.address_page(addr);
-
         for zone in self.zones {
             if zone.contains(page) {
                 zone.free_pages(page);
@@ -159,7 +153,7 @@ unsafe fn create_zones(
 
                 ptr::write(
                     ptr.offset(index as isize),
-                    Zone::new(pages, start..end, page_size)); 
+                    Zone::new(pages, start / page_size)); 
             }
             slice::from_raw_parts_mut(ptr, zones)
         })
@@ -173,7 +167,17 @@ impl Memory<'static> {
         let zones = create_zones(PAGE_SIZE, mmap, &mut malloc).unwrap();
 
         for zone in zones.iter() {
-            zone.free_space(&malloc);
+            let pages = zone.page_range();
+            let start = pages.start * PAGE_SIZE;
+            let end = pages.end * PAGE_SIZE;
+
+            for mem in malloc.free_memory_in_range(start..end) {
+                let start = numeric::align_up(
+                    mem.range.start, PAGE_SIZE) / PAGE_SIZE;
+                let end = numeric::align_down(
+                    mem.range.end, PAGE_SIZE) / PAGE_SIZE;
+                zone.free_page_range(&(start..end))
+            }
         }
 
         Memory { zones, page_size: PAGE_SIZE }

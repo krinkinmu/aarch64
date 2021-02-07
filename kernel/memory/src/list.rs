@@ -1,71 +1,70 @@
 use core::default::Default;
-use crate::page::{NULL_PAGE, PageRange};
+use core::mem;
+use core::ptr;
+use crate::page::Page;
 
 #[derive(Debug)]
 pub struct List {
-    head: u64,
+    head: *const Page,
 }
 
 impl List {
-    pub fn new() -> List {
-        List { head: NULL_PAGE }
+    pub const fn new() -> List {
+        List { head: ptr::null() }
     }
 
     #[cfg(test)]
     pub fn is_empty(&self) -> bool {
-        self.head == NULL_PAGE
+        self.head == ptr::null()
     }
 
-    pub fn push(&mut self, range: &PageRange, index: u64) {
-        assert_ne!(index, NULL_PAGE);
-        let page = range.page(index);
-        let next = self.head;
+    pub unsafe fn push(&mut self, page: *const Page) {
+        assert_eq!((*page).next.get(), ptr::null());
+        assert_eq!((*page).prev.get(), ptr::null());
+        let next = mem::replace(&mut self.head, page);
 
-        page.next.set(next);
-        page.prev.set(NULL_PAGE);
-        self.head = index;
+        (*page).next.set(next);
+        (*page).prev.set(ptr::null());
 
-        if next != NULL_PAGE {
-            range.page(next).prev.set(index);
+        if next != ptr::null() {
+            (*next).prev.set(page);
         }
     }
 
-    pub fn pop(&mut self, range: &PageRange) -> Option<u64> {
-        if self.head == NULL_PAGE {
+    pub unsafe fn pop(&mut self) -> Option<*const Page> {
+        if self.head == ptr::null() {
             return None;
         }
 
-        let page_index = self.head;
-        let page = range.page(page_index);
-        let next_index = page.next.get();
+        let page = self.head;
+        let next = (*page).next.get();
 
-        self.head = next_index;
-        if next_index != NULL_PAGE {
-            range.page(next_index).prev.set(NULL_PAGE);
+        self.head = next;
+        if next != ptr::null() {
+            (*next).prev.set(ptr::null());
         }
 
-        page.prev.set(NULL_PAGE);
-        page.next.set(NULL_PAGE);
-        Some(page_index)
+        (*page).prev.set(ptr::null());
+        (*page).next.set(ptr::null());
+        Some(page)
     }
 
-    pub fn remove(&mut self, range: &PageRange, index: u64) {
-        assert_ne!(index, NULL_PAGE);
-        let page = range.page(index);
-        let prev_index = page.prev.get();
-        let next_index = page.next.get();
+    pub unsafe fn remove(&mut self, page: *const Page) {
+        assert_ne!(page, ptr::null());
+        let prev = (*page).prev.get();
+        let next = (*page).next.get();
 
-        if prev_index != NULL_PAGE {
-            range.page(prev_index).next.set(next_index);
+        if prev != ptr::null() {
+            (*prev).next.set(next);
         }
-        if next_index != NULL_PAGE {
-            range.page(next_index).prev.set(prev_index);
+        if next != ptr::null() {
+            (*next).prev.set(prev);
         }
-        if self.head == index {
-            self.head = next_index;
+        if self.head == page {
+            self.head = next;
         }
-        page.prev.set(NULL_PAGE);
-        page.next.set(NULL_PAGE);
+        (*page).prev.set(ptr::null());
+        (*page).next.set(ptr::null());
     }
 }
 
@@ -78,103 +77,102 @@ impl Default for List {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::page::Page;
 
     #[test]
     fn test_new() {
         let l = List::new();
-        assert_eq!(l.head, NULL_PAGE);
+        assert_eq!(l.head, ptr::null());
     }
 
     #[test]
     fn test_is_empty() {
         let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 1);
         let mut l = List::new();
 
-        assert!(l.is_empty());
-        l.push(&range, 1);
-        assert!(!l.is_empty());
-        l.push(&range, 2);
-        assert!(!l.is_empty());
-        l.push(&range, 3);
-        assert!(!l.is_empty());
+        unsafe {
+            assert!(l.is_empty());
+            l.push(&pages[0] as *const Page);
+            assert!(!l.is_empty());
+            l.push(&pages[1] as *const Page);
+            assert!(!l.is_empty());
+            l.push(&pages[2] as *const Page);
+            assert!(!l.is_empty());
+        }
     }
 
     #[test]
     fn test_push_pop() {
         let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 1);
         let mut l = List::new();
 
-        assert_eq!(l.head, NULL_PAGE);
-        assert_eq!(l.pop(&range), None);
-        l.push(&range, 1);
-        l.push(&range, 2);
-        l.push(&range, 3);
-        assert_eq!(l.pop(&range), Some(3));
-        assert_eq!(range.page(3).next.get(), NULL_PAGE);
-        assert_eq!(range.page(3).prev.get(), NULL_PAGE);
-        assert_eq!(l.pop(&range), Some(2));
-        assert_eq!(range.page(2).next.get(), NULL_PAGE);
-        assert_eq!(range.page(2).prev.get(), NULL_PAGE);
-        assert_eq!(l.pop(&range), Some(1));
-        assert_eq!(range.page(1).next.get(), NULL_PAGE);
-        assert_eq!(range.page(1).prev.get(), NULL_PAGE);
-        assert_eq!(l.pop(&range), None);
-        assert_eq!(l.head, NULL_PAGE);
+        unsafe {
+            assert_eq!(l.head, ptr::null());
+            assert_eq!(l.pop(), None);
+            l.push(&pages[0] as *const Page);
+            l.push(&pages[1] as *const Page);
+            l.push(&pages[2] as *const Page);
+            assert_eq!(l.pop(), Some(&pages[2] as *const Page));
+            assert_eq!(pages[2].next.get(), ptr::null());
+            assert_eq!(pages[2].prev.get(), ptr::null());
+            assert_eq!(l.pop(), Some(&pages[1] as *const Page));
+            assert_eq!(pages[1].next.get(), ptr::null());
+            assert_eq!(pages[1].prev.get(), ptr::null());
+            assert_eq!(l.pop(), Some(&pages[0] as *const Page));
+            assert_eq!(pages[0].next.get(), ptr::null());
+            assert_eq!(pages[0].prev.get(), ptr::null());
+            assert_eq!(l.pop(), None);
+            assert_eq!(l.head, ptr::null());
+        }
     }
 
     #[test]
     fn test_remove() {
         let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 1);
         let mut l = List::new();
 
-        {
-            l.push(&range, 1);
-            l.push(&range, 2);
-            l.push(&range, 3);
-            l.remove(&range, 1);
-            assert_eq!(range.page(1).next.get(), NULL_PAGE);
-            assert_eq!(range.page(1).prev.get(), NULL_PAGE);
-            assert_eq!(l.pop(&range), Some(3));
-            assert_eq!(l.pop(&range), Some(2));
-            assert_eq!(l.pop(&range), None);
-            assert_eq!(l.head, NULL_PAGE);
+        unsafe {
+            l.push(&pages[0] as *const Page);
+            l.push(&pages[1] as *const Page);
+            l.push(&pages[2] as *const Page);
+            l.remove(&pages[0] as *const Page);
+            assert_eq!(pages[0].next.get(), ptr::null());
+            assert_eq!(pages[0].prev.get(), ptr::null());
+            assert_eq!(l.pop(), Some(&pages[2] as *const Page));
+            assert_eq!(l.pop(), Some(&pages[1] as *const Page));
+            assert_eq!(l.pop(), None);
+            assert_eq!(l.head, ptr::null());
         }
-        {
-            l.push(&range, 1);
-            l.push(&range, 2);
-            l.push(&range, 3);
-            l.remove(&range, 2);
-            assert_eq!(range.page(2).next.get(), NULL_PAGE);
-            assert_eq!(range.page(2).prev.get(), NULL_PAGE);
-            assert_eq!(l.pop(&range), Some(3));
-            assert_eq!(l.pop(&range), Some(1));
-            assert_eq!(l.pop(&range), None);
-            assert_eq!(l.head, NULL_PAGE);
+        unsafe {
+            l.push(&pages[0] as *const Page);
+            l.push(&pages[1] as *const Page);
+            l.push(&pages[2] as *const Page);
+            l.remove(&pages[1] as *const Page);
+            assert_eq!(pages[1].next.get(), ptr::null());
+            assert_eq!(pages[1].prev.get(), ptr::null());
+            assert_eq!(l.pop(), Some(&pages[2] as *const Page));
+            assert_eq!(l.pop(), Some(&pages[0] as *const Page));
+            assert_eq!(l.pop(), None);
+            assert_eq!(l.head, ptr::null());
         }
-        {
-            l.push(&range, 1);
-            l.push(&range, 2);
-            l.push(&range, 3);
-            l.remove(&range, 3);
-            assert_eq!(range.page(3).next.get(), NULL_PAGE);
-            assert_eq!(range.page(3).prev.get(), NULL_PAGE);
-            assert_eq!(l.head, 2);
-            assert_eq!(l.pop(&range), Some(2));
-            assert_eq!(l.pop(&range), Some(1));
-            assert_eq!(l.pop(&range), None);
-            assert_eq!(l.head, NULL_PAGE);
+        unsafe {
+            l.push(&pages[0] as *const Page);
+            l.push(&pages[1] as *const Page);
+            l.push(&pages[2] as *const Page);
+            l.remove(&pages[2] as *const Page);
+            assert_eq!(pages[2].next.get(), ptr::null());
+            assert_eq!(pages[2].prev.get(), ptr::null());
+            assert_eq!(l.pop(), Some(&pages[1] as *const Page));
+            assert_eq!(l.pop(), Some(&pages[0] as *const Page));
+            assert_eq!(l.pop(), None);
+            assert_eq!(l.head, ptr::null());
         }
-        {
-            l.push(&range, 1);
-            l.remove(&range, 1);
-            assert_eq!(range.page(1).next.get(), NULL_PAGE);
-            assert_eq!(range.page(1).prev.get(), NULL_PAGE);
-            assert_eq!(l.pop(&range), None);
-            assert_eq!(l.head, NULL_PAGE);
+        unsafe {
+            l.push(&pages[0] as *const Page);
+            l.remove(&pages[0] as *const Page);
+            assert_eq!(pages[0].next.get(), ptr::null());
+            assert_eq!(pages[0].prev.get(), ptr::null());
+            assert_eq!(l.pop(), None);
+            assert_eq!(l.head, ptr::null());
         }
     }
 }

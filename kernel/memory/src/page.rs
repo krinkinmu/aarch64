@@ -1,23 +1,23 @@
 use core::cell::Cell;
+#[cfg(test)]
+use core::ptr;
 
 #[derive(Debug)]
 pub struct Page {
-    pub next: Cell<u64>,
-    pub prev: Cell<u64>,
+    pub next: Cell<*const Page>,
+    pub prev: Cell<*const Page>,
     state: Cell<u64>,
 }
-
-pub const NULL_PAGE: u64 = 0;
 
 const LEVEL_MASK: u64 = 0x0ff;
 const FREE_MASK: u64 = 0x100;
 
 impl Page {
     #[cfg(test)]
-    pub fn new() -> Page {
+    pub const fn new() -> Page {
         Page {
-            next: Cell::new(0),
-            prev: Cell::new(0),
+            next: Cell::new(ptr::null()),
+            prev: Cell::new(ptr::null()),
             state: Cell::new(0),
         }
     }
@@ -44,30 +44,6 @@ impl Page {
     }
 }
 
-pub struct PageRange<'a> {
-    pages: &'a [Page],
-    offset: u64,
-}
-
-impl<'a> PageRange<'a> {
-    pub fn new(pages: &'a [Page], offset: u64) -> PageRange<'a> {
-        PageRange { pages, offset }
-    }
-
-    pub fn page(&self, index: u64) -> &Page {
-        if !self.contains_index(index) {
-            panic!();
-        }
-
-        &self.pages[(index - self.offset) as usize]
-    }
-
-    pub fn contains_index(&self, index: u64) -> bool {
-        index >= self.offset
-            && index < self.offset + self.pages.len() as u64
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,8 +52,8 @@ mod tests {
     #[test]
     fn test_page_new() {
         let page = Page::new();
-        assert_eq!(page.next.get(), NULL_PAGE);
-        assert_eq!(page.prev.get(), NULL_PAGE);
+        assert_eq!(page.next.get(), ptr::null());
+        assert_eq!(page.prev.get(), ptr::null());
         assert_eq!(page.level(), 0);
         assert!(!page.is_free());
     }
@@ -96,34 +72,6 @@ mod tests {
         page.set_busy();
         assert_eq!(page.level(), 0);
         assert!(!page.is_free());
-    }
-
-    #[test]
-    fn test_contains_index() {
-        let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 42);
-
-        assert!(!range.contains_index(41));
-        assert!(range.contains_index(42));
-        assert!(range.contains_index(43));
-        assert!(range.contains_index(44));
-        assert!(!range.contains_index(45));
-    }
-
-    #[test]
-    fn test_page() {
-        let pages = vec![Page::new(), Page::new(), Page::new()];
-        let range = PageRange::new(pages.as_slice(), 42);
-
-        assert_eq!(&pages[0] as *const Page, range.page(42) as *const Page);
-        range.page(42).next.set(42);
-        assert_eq!(range.page(42).next.get(), 42);
-        assert_eq!(&pages[1] as *const Page, range.page(43) as *const Page);
-        range.page(43).prev.set(42);
-        assert_eq!(range.page(43).prev.get(), 42);
-        assert_eq!(&pages[2] as *const Page, range.page(44) as *const Page);
-        range.page(44).set_level(42);
-        assert_eq!(range.page(44).level(), 42);
     }
 
     #[test]
