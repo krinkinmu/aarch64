@@ -37,6 +37,13 @@ test:
 	cd kernel/numeric ; cargo test ; cd -
 	cd kernel/sync ; cargo test ; cd -
 
+bench:
+	cd kernel/pl011 ; cargo bench ; cd -
+	cd kernel/devicetree ; cargo bench ; cd -
+	cd kernel/memory ; cargo bench ; cd -
+	cd kernel/numeric ; cargo bench ; cd -
+	cd kernel/sync ; cargo bench ; cd -
+
 clean:
 	cd kernel ; cargo clean ; cd -
 	$(MAKE) -C bootstrap clean
