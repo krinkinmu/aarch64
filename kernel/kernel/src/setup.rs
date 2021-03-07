@@ -1,8 +1,10 @@
 use bootstrap;
 use core::option::Option;
-use devicetree::DeviceTree;
-use log::{self, LoggerSink};
+use crate::Kernel;
+use devicetree::{self, DeviceTree};
+use log::{self, Logger, LoggerSink};
 use memory::{Memory, MemoryMap, MemoryType};
+use numeric;
 use pl011::PL011;
 
 
@@ -33,7 +35,7 @@ fn mmap_from_devicetree(dt: &DeviceTree) -> MemoryMap {
     mmap
 }
 
-pub fn setup_memory(dt: &DeviceTree) -> Memory<'static> {
+fn memory_from_devicetree(dt: &DeviceTree) -> Memory<'static> {
     let mmap = mmap_from_devicetree(dt);
     unsafe { Memory::new(&mmap) }
 }
@@ -49,7 +51,7 @@ impl LoggerSink for SerialSink {
     }
 }
 
-pub fn setup_logger() {
+fn serial_logger() -> Logger<'static> {
     static mut SINK: Option<SerialSink> = None;
 
     // For HiKey960 board that I have the following parameters were found to
@@ -65,6 +67,26 @@ pub fn setup_logger() {
     unsafe {
         assert!(SINK.is_none());
         SINK = Some(SerialSink { serial });
-        log::setup_logger_sink(SINK.as_ref().unwrap() as &dyn LoggerSink);
+        Logger::new(SINK.as_ref().unwrap() as &dyn LoggerSink)
     }
+}
+
+pub fn from_devicetree() -> Kernel {
+    let mut memory = {
+        let dt = devicetree::fdt::parse(bootstrap::fdt()).unwrap();
+        memory_from_devicetree(&dt)
+    };
+    let logger = serial_logger();
+
+    assert!(bootstrap::allocator_shutdown());
+    let heap = bootstrap::heap_range();
+
+    let mut addr = numeric::align_up(heap.start, memory.page_size());
+    let to = numeric::align_down(heap.end, memory.page_size());
+    while addr < to {
+        memory.free_pages(addr);
+        addr += memory.page_size();
+    }
+
+    Kernel { memory, logger }
 }

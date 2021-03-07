@@ -1,7 +1,4 @@
 #![no_std]
-#[macro_use]
-extern crate alloc;
-extern crate log;
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -37,8 +34,7 @@ pub extern "C" fn interrupt(frame: *mut InterruptFrame) {
     unsafe { safe_interrupt(&mut *frame) }
 }
 
-fn safe_interrupt(frame: &mut InterruptFrame) {
-    log::log(format!("{:?}", frame).as_str());
+fn safe_interrupt(_frame: &mut InterruptFrame) {
 }
 
 #[no_mangle]
@@ -46,8 +42,7 @@ pub extern "C" fn exception(frame: *mut InterruptFrame) {
     unsafe { safe_exception(&mut *frame) }
 }
 
-fn safe_exception(frame: &mut InterruptFrame) {
-    log::log(format!("{:?}", frame).as_str());
+fn safe_exception(_frame: &mut InterruptFrame) {
     loop {}
 }
 

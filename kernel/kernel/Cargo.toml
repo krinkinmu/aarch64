@@ -14,6 +14,7 @@ devicetree = { path = "../devicetree" }
 interrupt = { path = "../interrupt" }
 log = { path = "../log" }
 memory = { path = "../memory" }
+numeric = { path = "../numeric" }
 pl011 = { path = "../pl011" }
 runtime = { path = "../runtime" }
 sync = { path = "../sync" }

@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Mike Krinkin <krinkin.m.u@gmail.com>"]
 edition = "2018"
 
-[dependencies]
-log = { path = "../log" }
-
 [lib]
 name = "interrupt"
 crate-type = ["rlib"]

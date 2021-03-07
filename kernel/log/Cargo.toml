@@ -8,5 +8,3 @@ edition = "2018"
 name = "log"
 crate-type = ["rlib"]
 
-[dependencies]
-sync = { path = "../sync" }
