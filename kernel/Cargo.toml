@@ -3,6 +3,7 @@ members = [
     "bootstrap",
     "devicetree",
     "interrupt",
+    "intrusive",
     "kernel",
     "log",
     "memory",

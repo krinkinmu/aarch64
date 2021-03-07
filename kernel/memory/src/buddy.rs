@@ -1,14 +1,14 @@
 use core::cmp;
 use core::default::Default;
 use core::ops::Range;
-use crate::list::List;
+use crate::list::PageList;
 use crate::page::Page;
 
 pub const LEVELS: usize = 20;
 
 #[derive(Debug)]
 pub struct BuddySystem<'a> {
-    free: [List<'a>; LEVELS],
+    free: [PageList<'a>; LEVELS],
     pages: &'a [Page],
     offset: u64,
 }
@@ -111,14 +111,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new() {
-        let buddies = BuddySystem::new(&[], 0);
-        for level in 0..LEVELS {
-            assert!(buddies.free[level].is_empty());
-        }
-    }
-
-    #[test]
     fn test_buddy_index() {
         assert_eq!(BuddySystem::buddy_index(0, 0), 1);
         assert_eq!(BuddySystem::buddy_index(1, 0), 0);
@@ -138,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_alloc_free() {
-        let pages = vec![
+        let pages = [
             Page::new(), Page::new(), Page::new(), Page::new(),
             Page::new(), Page::new(), Page::new(), Page::new()
         ];
@@ -154,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_alignment() {
-        let pages = vec![
+        let pages = [
             Page::new(), Page::new(), Page::new(), Page::new(),
             Page::new(), Page::new(), Page::new(), Page::new()
         ];

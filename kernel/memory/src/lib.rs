@@ -1,6 +1,8 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(core_intrinsics)]
 extern crate alloc;
+extern crate intrusive;
+
 mod buddy;
 mod list;
 mod memory_map;

@@ -9,5 +9,6 @@ name = "memory"
 crate-type = ["rlib"]
 
 [dependencies]
+intrusive = { path = "../intrusive" }
 numeric = { path = "../numeric" }
 sync = { path = "../sync" }

@@ -1,11 +1,9 @@
+use intrusive::{IntrusiveListLink, StructFieldOffset};
 use core::cell::Cell;
-#[cfg(test)]
-use core::ptr;
 
 #[derive(Debug)]
 pub struct Page {
-    pub next: Cell<*const Page>,
-    pub prev: Cell<*const Page>,
+    pub link: IntrusiveListLink,
     state: Cell<u64>,
 }
 
@@ -13,11 +11,9 @@ const LEVEL_MASK: u64 = 0x0ff;
 const FREE_MASK: u64 = 0x100;
 
 impl Page {
-    #[cfg(test)]
-    pub const fn new() -> Page {
+    pub fn new() -> Page {
         Page {
-            next: Cell::new(ptr::null()),
-            prev: Cell::new(ptr::null()),
+            link: IntrusiveListLink::new(),
             state: Cell::new(0),
         }
     }
@@ -42,6 +38,11 @@ impl Page {
     pub fn set_busy(&self) {
         self.state.set(self.state.get() & !FREE_MASK);
     }
+
+    pub fn link_offset(&self) -> StructFieldOffset<Page, IntrusiveListLink> {
+        StructFieldOffset::new(
+            self as *const Page, &self.link as *const IntrusiveListLink)
+    }
 }
 
 #[cfg(test)]
@@ -52,8 +53,6 @@ mod tests {
     #[test]
     fn test_page_new() {
         let page = Page::new();
-        assert_eq!(page.next.get(), ptr::null());
-        assert_eq!(page.prev.get(), ptr::null());
         assert_eq!(page.level(), 0);
         assert!(!page.is_free());
     }
