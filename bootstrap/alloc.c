@@ -1,36 +1,7 @@
 #include "alloc.h"
 
 #include <stdbool.h>
-
-
-struct list_node {
-    struct list_node *prev;
-    struct list_node *next;
-};
-
-struct list_head {
-    struct list_node head;
-};
-
-
-static void list_remove(struct list_node *node)
-{
-    struct list_node *prev = node->prev;
-    struct list_node *next = node->next;
-
-    prev->next = next;
-    next->prev = prev;
-}
-
-static void list_add_after(struct list_node *prev, struct list_node *node)
-{
-    struct list_node *next = prev->next;
-
-    node->next = next;
-    node->prev = prev;
-    next->prev = node;
-    prev->next = node;
-}
+#include "list.h"
 
 
 struct header {
@@ -129,7 +100,7 @@ intptr_t bootstrap_allocator_add_range(uint64_t begin, uint64_t end)
     header->size = end - begin - metasz;
     footer->free = true;
     footer->size = end - begin - metasz;
-    list_add_after(&free.head, &header->link);
+    list_link_after(&free.head, &header->link);
     return 0;
 }
 
@@ -171,7 +142,7 @@ void *bootstrap_allocate(uintptr_t size)
         // too small for another allocation, then we just return the whole
         // range.
         if (header->size < size + metasz + minsz) {
-            list_remove(&header->link);
+            list_unlink(&header->link);
             header->free = false;
             footer->free = false;
             allocated += header->size;
@@ -226,7 +197,7 @@ static void __bootstrap_free(void *ptr)
     if (next->free) {
         struct footer *next_footer = matching_footer(next);
 
-        list_remove(&next->link);
+        list_unlink(&next->link);
         header->size += next->size;
         footer = next_footer;
         footer->size = header->size;
@@ -238,7 +209,7 @@ static void __bootstrap_free(void *ptr)
     if (prev->free) {
         struct header *prev_header = matching_header(prev);
 
-        list_remove(&prev_header->link);
+        list_unlink(&prev_header->link);
         prev_header->size += header->size;
         header = prev_header;
         footer->size = header->size;
@@ -246,7 +217,7 @@ static void __bootstrap_free(void *ptr)
 
     header->free = true;
     footer->free = true;
-    list_add_after(&free.head, &header->link);
+    list_link_after(&free.head, &header->link);
 }
 
 void bootstrap_free(void *ptr)
