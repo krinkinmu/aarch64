@@ -6,7 +6,7 @@ CXXFLAGS := \
     -fno-exceptions -fno-rtti -Ofast -g -fPIE -target aarch64-unknown-none \
     -Wall -Werror -Wframe-larger-than=1024 -pedantic -I..
 
-CXXSRCS := string_view.cc
+CXXSRCS := stream.cc string_view.cc
 CXXOBJS := $(CXXSRCS:.cc=.o)
 
 OBJS := $(CXXOBJS)
