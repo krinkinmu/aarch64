@@ -1,8 +1,19 @@
+.bss
+.balign 4096
+    .skip 16384
+_stack_top:
+
+
 .text
 .global start
-.extern main, relocate_kernel, vector_table
+.extern kernel, relocate_kernel, vector_table
 
 start:
+    // Switch to our own stack before doing anything else, since we don't keep
+    // track of the memory that has been allocated in UEFI, so as a result we
+    // cannot depend on the memory being available.
+    adr x19, _stack_top
+    mov sp, x19
     // Registers r0 and r1 contain arguments passed from the loader, so we
     // need to make sure that those are preserved until we call into main.
     // According to the aarch64 calling conventions register r19-r28 must be
@@ -237,12 +248,22 @@ in_el2:
     //  * x0 - difference between runtime and linktime addresses
     //  * x1 - begining of the array of the relocation entries
     //  * x2 - end of the array of the relocation entries
-    bl relocate_kernel
+    bl __relocate
+
+    // Call constructors of static objects. That's one of the guarantees of the
+    // C++ language that constructors of static objects (if any) will be called
+    // before "main". We don't exactly have the "main" function here, but we do
+    // have the "kernel" function which is similar in many regards. And in
+    // general, if we are going to use C++, we should avoid surprises in the
+    // runtime behavior.
+    adr x0, _INIT_BEGIN
+    adr x1, _INIT_END
+    bl __constructors
 
     // All the preparations are complete now, so we can call main.
     mov x0, x19
     mov x1, x20
-    b main
+    bl kernel
 
 // If we are in the EL1 it means that either the hardware doesn't support the
 // non-secure EL2 we need or for some reason it's not available to us to use.

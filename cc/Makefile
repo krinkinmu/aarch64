@@ -1,39 +1,29 @@
-CC := clang
 CXX := clang
 AR := llvm-ar
 
-AFLAGS := \
-	-fPIE -target aarch64-unknown-none -Wall -Werror
 CXXFLAGS := \
     -MMD -mno-red-zone -std=c++17 -ffreestanding -fno-threadsafe-statics \
     -fno-exceptions -fno-rtti -Ofast -g -fPIE -target aarch64-unknown-none \
     -Wall -Werror -Wframe-larger-than=1024 -pedantic -I..
 
-ASRCS := start.S interrupts.S
-AOBJS := $(ASRCS:.S=.o)
-
-CXXSRCS := main.cc pl011.cc memory.cc log.cc
+CXXSRCS := ccrt.cc
 CXXOBJS := $(CXXSRCS:.cc=.o)
 
-OBJS := $(AOBJS) $(CXXOBJS)
+OBJS := $(CXXOBJS)
 
 default: all
-
-%.o: %.S
-	$(CC) $(AFLAGS) -c $< -o $@
 
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-libbootstrap.a: $(OBJS)
+libcc.a: $(OBJS)
 	$(AR) rc $@ $^
 
--include $(ASRCS:.S=.d)
 -include $(CXXSRCS:.cc=.d)
 
 .PHONY: clean all default
 
-all: libbootstrap.a
+all: libcc.a
 
 clean:
 	rm -rf *.elf *.o *.d *.a

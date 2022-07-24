@@ -1,10 +1,7 @@
 export CC := clang
+export CXX := clang
 export AR := llvm-ar
 export LD := lld
-
-export CFLAGS := \
-	-ffreestanding -MMD -mno-red-zone -std=c11 -Ofast \
-	-fPIE -target aarch64-unknown-none -Wall -Werror -pedantic
 
 LDFLAGS := \
 	-flavor ld -m aarch64elf \
@@ -19,14 +16,38 @@ libkernel.a:
 	cd kernel ; cargo build $(CARGO_TARGET) --release ; cd -
 	cp kernel/target/aarch64-unknown-custom/release/libkernel.a $@
 
+libutil.a:
+	$(MAKE) -C util
+	cp util/libutil.a $@
+
+libmemory.a:
+	$(MAKE) -C memory
+	cp memory/libmemory.a $@
+
+libfdt.a:
+	$(MAKE) -C fdt
+	cp fdt/libfdt.a $@
+
 libbootstrap.a:
 	$(MAKE) -C bootstrap
 	cp bootstrap/libbootstrap.a $@
 
-kernel.elf: libbootstrap.a libkernel.a
+libc.a:
+	$(MAKE) -C c
+	cp c/libc.a $@
+
+libcc.a:
+	$(MAKE) -C cc
+	cp cc/libcc.a $@
+
+libcc.a:
+	$(MAKE) -C cc
+	cp cc/libcc.a $@
+
+kernel.elf: libcommon.a libc.a libcc.a libutil.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
 	$(LD) $(LDFLAGS) $^ -o $@
 
-.PHONY: clean all default test libkernel.a libbootstrap.a
+.PHONY: clean all default test libcommon.a libc.a libcc.a libkernel.a libbootstrap.a libutil.a libmemory.a libfdt.a
 
 all: kernel.elf
 
@@ -47,5 +68,11 @@ bench:
 clean:
 	cd kernel ; cargo clean ; cd -
 	$(MAKE) -C bootstrap clean
+	$(MAKE) -C memory clean
+	$(MAKE) -C util clean
+	$(MAKE) -C fdt clean
+	$(MAKE) -C c clean
+	$(MAKE) -C cc clean
+	$(MAKE) -C common clean
 	rm -rf *.elf *.o *.d *.a
 

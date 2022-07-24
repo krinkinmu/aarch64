@@ -3,4 +3,11 @@
 *.a
 *.elf
 *.lock
+*.fd
+*.dts
+*.dtb
+root/
+TODO
+qemu.sh
 kernel/target
+.gdbinit

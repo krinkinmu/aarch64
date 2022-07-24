@@ -1,6 +1,5 @@
 .text
 .global vector_table
-.extern interrupt, exception
 .balign 2048
 // The following four entries are for exceptions and interrupts when we use
 // SP_EL0 as a stack pointer for all ELs and the interrupt/exception is taken
@@ -207,3 +206,9 @@ exception_entry:
     ldp x0, x1, [x1, #0]
 
     eret
+
+interrupt:
+    ret
+
+exception:
+    ret

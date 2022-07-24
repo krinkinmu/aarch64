@@ -22,7 +22,14 @@ SECTIONS
         _TEXT_END = .;
     } :text
 
-    .rodata : ALIGN(0x1000) {
+    .init_array : ALIGN(0x1000) {
+        _INIT_BEGIN = .;
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        _INIT_END = .;
+    } :rodata
+
+    .rodata : {
         _RODATA_BEGIN = .;
         *(.rodata)
         _RODATA_END = .;
