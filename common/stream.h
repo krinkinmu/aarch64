@@ -33,6 +33,11 @@ public:
     virtual int PutN(const char* data, int n);
 };
 
+OutputStream& operator<<(OutputStream& out, char c);
+OutputStream& operator<<(OutputStream& out, long long x);
+OutputStream& operator<<(OutputStream& out, unsigned long long x);
+OutputStream& operator<<(OutputStream& out, const char* str);
+
 }  // namespace common
 
 #endif  // __COMMON_STREAM_H__
