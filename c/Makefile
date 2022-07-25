@@ -6,7 +6,7 @@ CFLAGS := \
 	-Ofast -g -fPIE -target aarch64-unknown-none \
 	-Wall -Werror -Wframe-larger-than=1024 -pedantic -I..
 
-CSRCS := crt.c relocate.c
+CSRCS := crt.c relocate.c string.c
 COBJS := $(CSRCS:.c=.o)
 
 OBJS := $(COBJS)
