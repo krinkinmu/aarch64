@@ -44,6 +44,10 @@ libcc.a:
 	$(MAKE) -C cc
 	cp cc/libcc.a $@
 
+libcommon.a:
+	$(MAKE) -C common
+	cp common/libcommon.a $@
+
 kernel.elf: libcommon.a libc.a libcc.a libutil.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
 	$(LD) $(LDFLAGS) $^ -o $@
 
