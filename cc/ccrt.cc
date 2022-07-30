@@ -25,6 +25,37 @@ extern "C" int __cxa_atexit(void (*destroy)(void*), void* arg, void* dso) {
 }
 
 /*
+ * __cxa_pure_virtual is part of the C++ ABI. In C++ it's possible to create a
+ * class that has pure virtual functions. Pure virtual functions don't have to
+ * have a definition. So when compiler generates a vtbl for such classes it
+ * uses __cxa_pure_virtual as a placeholder.
+ *
+ * Naturally, calling a pure virtual function is a mistake, but through
+ * incorrect use of the C++ language it's still possible to sometimes call a
+ * pure virtual function. So implementation should allow us to catch such
+ * cases.
+ */
+extern "C" void __cxa_pure_virtual() {
+    while (true);
+}
+
+/*
+ * TODO: figure out why it's needed and what to do with it.
+ *
+ * It appears that C++ compiler generates calls to the operator delete for so
+ * called deleting destructors. When we define a virtual destructor, compiler
+ * treats it somewhat differently from other virtual functions - it actually
+ * generates 2 functions: the destructor of the object itself and a deleting
+ * destructor.
+ *
+ * Deleting destructor executes the normal destructor procedure and calls
+ * delete operator that typically deallocates memory. One caveat here is that
+ * delete operator can be overloaded and the purpose of the deleting destructor
+ * is to call the right delete operator in this case.
+ */
+void operator delete(void*) {}
+
+/*
  * __constructors is not defined in any ABI I know of, it's just a helper
  * function that bootstrap code can call to run constructors of the static
  * objects.
