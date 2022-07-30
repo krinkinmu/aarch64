@@ -1,0 +1,8 @@
+#ifndef __CC_NEW__
+#define __CC_NEW__
+
+#include <cstddef>
+
+void* operator new(size_t, void* ptr);
+
+#endif  // __CC_NEW_H__

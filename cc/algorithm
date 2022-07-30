@@ -1,0 +1,71 @@
+#ifndef __CC_ALGORITHM__
+#define __CC_ALGORITHM__
+
+#include <utility>
+
+namespace std {
+
+template <typename T>
+constexpr const T& min(const T& a, const T& b) {
+    return !(b<a) ? a : b; 
+}
+
+template <typename T>
+constexpr const T& max(const T& a, const T& b) {
+    return (a < b) ? b : a; 
+}
+
+
+template <typename T>
+void swap(T& a, T& b) {
+    T tmp = move(a);
+    a = move(b);
+    b = move(tmp);    
+}
+
+template <typename It>
+void iter_swap(It a, It b) {
+    using std::swap;
+    swap(*a, *b);
+}
+
+template <typename BiDiIt>
+void reverse(BiDiIt first, BiDiIt last) {
+    while ((first != last) && (first != --last)) {
+        std::iter_swap(first, last);
+        ++first;
+    }
+}
+
+template <typename It, typename T, typename Less>
+It lower_bound(It first, It last, const T& val, Less less) {
+    for (It it = first; it != last; ++it) {
+        if (!less(*it, val)) {
+            return it;
+        }
+    }
+    return last;
+}
+
+template <typename It, typename T, typename Less>
+It upper_bound(It first, It last, const T& val, Less less) {
+    for (It it = first; it != last; ++it) {
+        if (less(val, *it)) {
+            return it;
+        }
+    }
+    return last;
+}
+
+
+template <typename It>
+It rotate(It first, It middle, It last) {
+    reverse(first, middle);
+    reverse(middle, last);
+    reverse(first, last);
+    return last - (middle - first);
+}
+
+}  // namespace std
+
+#endif  // __CC_ALGORITHM__

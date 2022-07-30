@@ -4,9 +4,9 @@ AR := llvm-ar
 CXXFLAGS := \
     -MMD -mno-red-zone -std=c++17 -ffreestanding -fno-threadsafe-statics \
     -fno-exceptions -fno-rtti -Ofast -g -fPIE -target aarch64-unknown-none \
-    -Wall -Werror -Wframe-larger-than=1024 -pedantic -I..
+    -Wall -Werror -Wframe-larger-than=1024 -pedantic -I.. -I../c -I../cc
 
-CXXSRCS := ccrt.cc
+CXXSRCS := ccrt.cc new.cc
 CXXOBJS := $(CXXSRCS:.cc=.o)
 
 OBJS := $(CXXOBJS)
