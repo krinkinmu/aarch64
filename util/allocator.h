@@ -2,7 +2,6 @@
 #define __UTIL_ALLOCATOR_H__
 
 #include "memory/memory.h"
-#include "bootstrap/log.h"
 
 namespace util {
 

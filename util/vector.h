@@ -2,7 +2,6 @@
 #define __UTIL_VECTOR_H__
 
 #include "util/algorithms.h"
-#include "bootstrap/log.h"
 
 namespace util {
 
