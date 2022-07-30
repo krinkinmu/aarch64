@@ -1,5 +1,6 @@
-#include "util/stdint.h"
-#include "util/string.h"
+#include <cstdint>
+#include <cstring>
+
 #include "util/utility.h"
 #include "util/intrusive_list.h"
 #include "util/new.h"
@@ -10,8 +11,8 @@
 #include "memory/memory.h"
 #include "memory/space.h"
 #include "bootstrap/memory.h"
-#include "bootstrap/log.h"
-
+#include "bootstrap/pl011.h"
+#include "common/logging.h"
 
 namespace {
 
@@ -47,15 +48,15 @@ bool ReserveMemory(
 }
 
 void PrintMMap(const memory::MemoryMap& mmap) {
-    Log() << "Memory Map:\n";
+    common::Log() << "Memory Map:\n";
     for (auto it = mmap.ConstBegin(); it != mmap.ConstEnd(); ++it) {
-        Log() << "[" << reinterpret_cast<const void*>(it->begin)
+        common::Log() << "[" << reinterpret_cast<const void*>(it->begin)
               << "-" << reinterpret_cast<const void*>(it->end)
               << ") ";
         if (it->status == memory::MemoryStatus::RESERVED) {
-            Log() << "reserved\n";
+            common::Log() << "reserved\n";
         } else {
-            Log() << "free\n";
+            common::Log() << "free\n";
         }
     }
 }
@@ -80,14 +81,14 @@ void AllocatorTest() {
         if (!m.Size()) {
             break;
         }
-        util::memset(reinterpret_cast<void*>(m.FromAddress()), 0, m.Size());
+        memset(reinterpret_cast<void*>(m.FromAddress()), 0, m.Size());
         Item* item = reinterpret_cast<Item*>(m.FromAddress());
         ::new(static_cast<void*>(&item->m)) memory::Contigous(util::Move(m));
         items.LinkAt(items.Begin(), item);
         ++allocated;
     }
 
-    Log() << "Allocated " << allocated << " " << kSize << " byte pages\n";
+    common::Log() << "Allocated " << allocated << " " << kSize << " byte pages\n";
 
     size_t freed = 0;
 
@@ -98,7 +99,7 @@ void AllocatorTest() {
         ++freed;
     }
 
-    Log() << "Freed " << freed << " " << kSize << " byte pages\n";
+    common::Log() << "Freed " << freed << " " << kSize << " byte pages\n";
 }
 
 struct Pointer : public util::ListNode<Pointer> {
@@ -116,7 +117,7 @@ void CacheTest() {
         if (p == nullptr) {
             break;
         }
-        util::memset(p, 0, sizeof(Pointer));
+        memset(p, 0, sizeof(Pointer));
         Pointer* ptr = reinterpret_cast<Pointer*>(p);
         ::new(ptr) Pointer();
         ptr->ptr = p;
@@ -124,10 +125,10 @@ void CacheTest() {
         ++allocated;
     }
 
-    Log() << "Allocated " << allocated
+    common::Log() << "Allocated " << allocated
           << " items of size " << sizeof(Pointer)
           << " bytes and with alignment of " << alignof(Pointer) << " bytes\n";
-    Log() << "Available " << memory::AvailablePhysical() << " bytes\n";
+    common::Log() << "Available " << memory::AvailablePhysical() << " bytes\n";
     size_t freed = 0;
 
     while (!ptrs.Empty()) {
@@ -137,15 +138,15 @@ void CacheTest() {
         freed++;
     }
 
-    Log() << "Freed " << allocated
+    common::Log() << "Freed " << allocated
           << " items of size " << sizeof(Pointer)
           << " bytes and with alignment of " << alignof(Pointer) << " bytes\n";
-    Log() << "Available " << memory::AvailablePhysical()
+    common::Log() << "Available " << memory::AvailablePhysical()
           << " bytes after freeing\n";
 
     cache.Reclaim();
 
-    Log() << "Available " << memory::AvailablePhysical()
+    common::Log() << "Available " << memory::AvailablePhysical()
           << " bytes after reclaim\n";
 }
 
@@ -158,7 +159,7 @@ struct LargeItem {
 };
 
 void VectorTest() {
-    Log() << "Available " << memory::AvailablePhysical()
+    common::Log() << "Available " << memory::AvailablePhysical()
           << " bytes before vector test\n";
 
     {
@@ -166,17 +167,27 @@ void VectorTest() {
 
         while (v.PushBack(LargeItem())) {
             if ((v.Size() % 100000) == 0) {
-                Log() << "Current vector size " << v.Size() << "\n";
+                common::Log() << "Current vector size " << v.Size() << "\n";
             }
         }
 
-        Log() << "Vector size " << v.Size() << " entries currently\n";
-        Log() << "Available " << memory::AvailablePhysical()
+        common::Log() << "Vector size " << v.Size() << " entries currently\n";
+        common::Log() << "Available " << memory::AvailablePhysical()
               << " bytes after filling vector\n";
     }
 
-    Log() << "Available " << memory::AvailablePhysical()
+    common::Log() << "Available " << memory::AvailablePhysical()
           << " bytes after deleting vector\n";
+}
+
+void SetupLogger() {
+    // For HiKey960 board that I have the following parameters were found to        // work fine:
+    //
+    // PL011::Serial(
+    //     /* base_address = */0xfff32000, /* base_clock = */19200000);
+    static PL011 serial = PL011::Serial(0x9000000, 24000000);
+    static PL011OutputStream stream(&serial);
+    common::RegisterLog(&stream); 
 }
 
 }  // namespace
@@ -186,78 +197,78 @@ extern "C" void kernel(struct Data *data, size_t size) {
 
     uint64_t dtb_begin, dtb_end;
 
-    Log() << "Looking up the DTB...\n";
+    common::Log() << "Looking up the DTB...\n";
     if (!LookupDTB(data, size, &dtb_begin, &dtb_end)) {
-        Log() << "Failed to lookup the DTB\n";
+        common::Log() << "Failed to lookup the DTB\n";
         Panic();
     }
 
-    Log() << "Setting up DTB Parser...\n";
+    common::Log() << "Setting up DTB Parser...\n";
     fdt::Blob blob;
     if (!fdt::Blob::Parse(
             reinterpret_cast<const uint8_t*>(dtb_begin),
             dtb_end - dtb_begin,
             &blob)) {
-        Log() << "Failed to setup DTB parser!\n";
+        common::Log() << "Failed to setup DTB parser!\n";
         Panic();
     }
 
-    Log() << "Initializaing memory map...\n";
+    common::Log() << "Initializaing memory map...\n";
     static memory::MemoryMap mmap;
     if (!MMapFromDTB(blob, &mmap)) {
-        Log() << "Failed to initialize memory map!\n";
+        common::Log() << "Failed to initialize memory map!\n";
         Panic();
     }
 
-    Log() << "Reserve used memory in the memory map...\n";
+    common::Log() << "Reserve used memory in the memory map...\n";
     if (!ReserveMemory(data, size, &mmap)) {
-        Log() << "Failed to reserved used memory in the memory map!\n";
+        common::Log() << "Failed to reserved used memory in the memory map!\n";
         Panic();
     }
     PrintMMap(mmap);
 
-    Log() << "Initializing memory allocator...\n";
+    common::Log() << "Initializing memory allocator...\n";
     if (!memory::SetupAllocator(&mmap)) {
-        Log() << "Failed to initialize memory allocator!\n";
+        common::Log() << "Failed to initialize memory allocator!\n";
         Panic();
     }
 
 /*
-    Log() << "Preparing page tables...\n";
+    common::Log() << "Preparing page tables...\n";
     memory::AddressSpace aspace;
     if (!memory::SetupAddressSpace(mmap, &aspace)) {
-        Log() << "Failed to prepare page tables!\n";
+        common::Log() << "Failed to prepare page tables!\n";
         Panic();
     }
 
-    Log() << "Installing page tables...\n";
+    common::Log() << "Installing page tables...\n";
     if (!memory::SetupMapping(aspace)) {
-        Log() << "Failed to install page tables!\n";
+        common::Log() << "Failed to install page tables!\n";
         Panic();
     }
 */
 
-    Log() << "Initialization complete.\n";
-    Log() << "Total " << memory::TotalPhysical() << " bytes\n";
-    Log() << "Available " << memory::AvailablePhysical() << " bytes\n";
+    common::Log() << "Initialization complete.\n";
+    common::Log() << "Total " << memory::TotalPhysical() << " bytes\n";
+    common::Log() << "Available " << memory::AvailablePhysical() << " bytes\n";
 
     AllocatorTest();
     AllocatorTest();
     AllocatorTest();
 
-    Log() << "Available after test " << memory::AvailablePhysical() << " bytes\n";
+    common::Log() << "Available after test " << memory::AvailablePhysical() << " bytes\n";
 
     CacheTest();
     CacheTest();
     CacheTest();
 
-    Log() << "Available after test " << memory::AvailablePhysical() << " bytes\n";
+    common::Log() << "Available after test " << memory::AvailablePhysical() << " bytes\n";
 
     VectorTest();
     VectorTest();
     VectorTest();
 
-    Log() << "Finished.";
+    common::Log() << "Finished.";
 
     Panic();
 }

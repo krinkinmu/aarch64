@@ -5,6 +5,7 @@ namespace common {
 namespace {
 
 struct NoopSink final : public OutputStream {
+    ~NoopSink() override {}
     int Put(char) override { return 0; }
     int PutN(const char*, int n) override { return n; }
 };
@@ -19,6 +20,7 @@ void RegisterLog(OutputStream* out) {
 
 OutputStream& Log() {
     static NoopSink noop_sink;
+
     if (logging_sink == nullptr) {
         return noop_sink;
     }
