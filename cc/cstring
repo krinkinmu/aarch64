@@ -1,0 +1,8 @@
+#ifndef __CC_CSTRING__
+#define __CC_CSTRING__
+
+extern "C" {
+#include <string.h>
+}
+
+#endif  // __CC_CSTRING__

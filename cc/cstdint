@@ -1,0 +1,8 @@
+#ifndef __CC_CSTDINT__
+#define __CC_CSTDINT__
+
+extern "C" {
+#include <stdint.h>
+}
+
+#endif  // __CC_CSTDINT__

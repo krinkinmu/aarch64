@@ -1,0 +1,8 @@
+#ifndef __CC_CSTDDEF__
+#define __CC_CSTDDEF__
+
+extern "C" {
+#include <stddef.h>
+}
+
+#endif  // __CC_CSTDDEF__
