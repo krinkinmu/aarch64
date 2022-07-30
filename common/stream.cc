@@ -1,14 +1,16 @@
 #include "common/stream.h"
 
-#include <stddef.h>
-#include <string.h>
+#include <cstdint>
+#include <cstddef>
+#include <cstring>
 
 
 namespace common {
 
 namespace {
 
-char* FormatNumber(char* buffer, unsigned long long x) {
+char* FormatNumber(char* buffer, int base, unsigned long long x) {
+    static const char digit[] = "0123456789abcdef";
     if (x == 0) {
         *buffer++ = '0';
         return buffer;
@@ -16,8 +18,8 @@ char* FormatNumber(char* buffer, unsigned long long x) {
 
     char* e = buffer;
     while (x) {
-        *e++ = (x % 10) + '0';
-        x /= 10;
+        *e++ = digit[x % base];
+        x /= base;
     }
 
     for (char *l = buffer, *r = e; l < r;) {
@@ -63,27 +65,46 @@ OutputStream& operator<<(OutputStream& out, char c) {
     return out;
 }
 
+OutputStream& operator<<(OutputStream& out, int x) {
+    return out << static_cast<long long>(x);
+}
+
+OutputStream& operator<<(OutputStream& out, unsigned x) {
+    return out << static_cast<unsigned long long>(x);
+}
+
+OutputStream& operator<<(OutputStream& out, long x) {
+    return out << static_cast<long long>(x);
+}
+
+OutputStream& operator<<(OutputStream& out, unsigned long x) {
+    return out << static_cast<unsigned long long>(x);
+}
+
 OutputStream& operator<<(OutputStream& out, long long x) {
-    char buffer[32];
-    char* e = buffer;
     if (x < 0) {
-        *e++ = '-';
-        x = -x;
+        return out << "-" << static_cast<unsigned long long>(-x);
     }
-    e = FormatNumber(e, static_cast<unsigned long long>(x));
-    Write(out, buffer, e - buffer);
-    return out;
+    return out << static_cast<unsigned long long>(x);
 }
 
 OutputStream& operator<<(OutputStream& out, unsigned long long x) {
-    char buffer[32];
-    char* e = FormatNumber(buffer, x);
+    char buffer[128];
+    char* e = FormatNumber(buffer, 10, x);
     Write(out, buffer, e - buffer);
     return out;
 }
 
 OutputStream& operator<<(OutputStream& out, const char* str) {
     Write(out, str, strlen(str));
+    return out;
+}
+
+OutputStream& operator<<(OutputStream& out, const void* ptr) {
+    const uintptr_t x = reinterpret_cast<uintptr_t>(ptr);
+    char buffer[128] = "0x";
+    char* e = FormatNumber(buffer + 2, 16, x);
+    Write(out, buffer, e - buffer);
     return out;
 }
 

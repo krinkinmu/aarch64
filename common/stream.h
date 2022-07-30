@@ -34,9 +34,14 @@ public:
 };
 
 OutputStream& operator<<(OutputStream& out, char c);
+OutputStream& operator<<(OutputStream& out, int x);
+OutputStream& operator<<(OutputStream& out, unsigned x);
+OutputStream& operator<<(OutputStream& out, long x);
+OutputStream& operator<<(OutputStream& out, unsigned long x);
 OutputStream& operator<<(OutputStream& out, long long x);
 OutputStream& operator<<(OutputStream& out, unsigned long long x);
 OutputStream& operator<<(OutputStream& out, const char* str);
+OutputStream& operator<<(OutputStream& out, const void* ptr);
 
 }  // namespace common
 
