@@ -124,62 +124,15 @@ void PL011::Send(const uint8_t *data, size_t size) {
     }
 }
 
-void FormatAddress(PL011& dev, uintptr_t addr) {
-    if (addr == 0) {
-        dev.Send(reinterpret_cast<const uint8_t*>("0x0"), 3);
-        return;
-    }
+PL011OutputStream::PL011OutputStream(PL011 *dev) : dev_(dev) {}
 
-    char buf[18] = "0x";
-    size_t size = 2;
+PL011OutputStream::~PL011OutputStream() {}
 
-    for (; addr; ++size, addr >>= 4) {
-        if ((addr & 0xf) < 10)
-            buf[size] = '0' + (addr & 0xf);
-        else
-            buf[size] = 'a' + (addr & 0xf) - 10;
-    }
-
-    for (size_t l = 2, r = size - 1; l < r; ++l, --r) {
-        char c = buf[l];
-        buf[l] = buf[r];
-        buf[r] = c;
-    }
-
-    dev.Send(reinterpret_cast<const uint8_t*>(buf), size);
+int PL011OutputStream::PutN(const char *data, int n) {
+    dev_->Send(reinterpret_cast<const uint8_t*>(data), n);
+    return n;
 }
 
-void FormatNumber(PL011 &dev, intmax_t x) {
-    if (x == 0) {
-        dev.Send(reinterpret_cast<const uint8_t*>("0"), 1);
-        return;
-    }
-
-    char buf[18];
-    size_t off = 0;
-
-    if (x < 0) {
-        buf[off++] = '-';
-        x = -x;
-    }
-
-    size_t size = off;
-    for (; x != 0; ++size, x /= 10)
-        buf[size] = '0' + (x % 10);
-
-    for (size_t l = off, r = size - 1; l < r; ++l, --r) {
-        char c = buf[l];
-        buf[l] = buf[r];
-        buf[r] = c;
-    }
-
-    dev.Send(reinterpret_cast<const uint8_t*>(buf), size);
-}
-
-void FormatString(PL011& dev, const char *str) {
-    FormatString(dev, util::StringView(str));
-}
-
-void FormatString(PL011& dev, util::StringView str) {
-    dev.Send(reinterpret_cast<const uint8_t*>(str.Data()), str.Size());
+int PL011OutputStream::Put(char c) {
+    return PutN(&c, 1);
 }

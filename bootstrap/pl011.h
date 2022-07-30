@@ -1,9 +1,10 @@
 #ifndef __BOOTSTRAP_PL011_H__
 #define __BOOTSTRAP_PL011_H__
 
-#include "util/stddef.h"
-#include "util/stdint.h"
-#include "util/string_view.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "common/stream.h"
 
 /*
  * UART communication is defined by its speed (baudrate) and the format of the
@@ -46,9 +47,23 @@ private:
     static const uint32_t kStopBits = 1;
 };
 
-void FormatAddress(PL011 &dev, uintptr_t addr);
-void FormatNumber(PL011 &dev, intmax_t num);
-void FormatString(PL011 &dev, const char *str);
-void FormatString(PL011 &dev, util::StringView str);
+class PL011OutputStream final : public common::OutputStream {
+public:
+    PL011OutputStream(PL011 *dev);
+    ~PL011OutputStream() override;
+
+    PL011OutputStream(const PL011OutputStream&) = delete;
+    PL011OutputStream& operator=(const PL011OutputStream&) = delete;
+
+    PL011OutputStream(PL011OutputStream&&) = default;
+    PL011OutputStream& operator=(PL011OutputStream&&) = default;
+
+    int PutN(const char *data, int size) override;
+    int Put(char c) override;
+
+private:
+    PL011 *dev_;
+};
+
 
 #endif  // __BOOTSTRAP_PL011_H__
