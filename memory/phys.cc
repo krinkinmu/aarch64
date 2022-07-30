@@ -1,11 +1,21 @@
 #include "phys.h"
 
-#include "util/algorithms.h"
-#include "util/math.h"
+#include <algorithm>
+
+#include "common/math.h"
+
 
 namespace memory {
 
 namespace {
+
+bool CanMerge(const MemoryRange& prev, const MemoryRange& next) {
+    return next.begin == prev.end && next.status == prev.status;
+}
+
+bool IsEmpty(const MemoryRange& range) {
+    return range.begin == range.end;
+}
 
 MemoryRange* Compact(MemoryRange* begin, MemoryRange* end) {
     if (begin == end) {
@@ -14,12 +24,12 @@ MemoryRange* Compact(MemoryRange* begin, MemoryRange* end) {
 
     MemoryRange* pos = begin;
     for (MemoryRange* it = pos + 1; it != end; ++it) {
-        if (it->begin == pos->end && it->status == pos->status) {
+        if (CanMerge(*pos, *it)) {
             pos->end = it->end;
             continue;
         }
 
-        if (pos->begin == pos->end) {
+        if (IsEmpty(*pos)) {
             *pos = *it;
         } else {
             ++pos;
@@ -27,13 +37,14 @@ MemoryRange* Compact(MemoryRange* begin, MemoryRange* end) {
         }
     }
 
-    if (pos->begin == pos->end) {
+    if (IsEmpty(*pos)) {
         return pos;
     }
     return pos + 1;
 }
 
 }  // namespace
+
 
 bool MemoryMap::SetStatus(uintptr_t begin, uintptr_t end, MemoryStatus status) {
     MemoryRange range;
@@ -45,9 +56,9 @@ bool MemoryMap::SetStatus(uintptr_t begin, uintptr_t end, MemoryStatus status) {
         return l.end <= r.begin;
     };
 
-    MemoryRange *from = util::LowerBound(
+    MemoryRange *from = std::lower_bound(
         ranges_.Begin(), ranges_.End(), range, less);
-    MemoryRange *to = util::UpperBound(
+    MemoryRange *to = std::upper_bound(
         ranges_.Begin(), ranges_.End(), range, less);
 
     if (from == to) {
@@ -101,9 +112,9 @@ bool MemoryMap::Register(uintptr_t begin, uintptr_t end, MemoryStatus status) {
         return l.end <= r.begin;
     };
 
-    auto from = util::LowerBound(
+    auto from = std::lower_bound(
         ranges_.Begin(), ranges_.End(), range, less);
-    auto to = util::UpperBound(
+    auto to = std::upper_bound(
         ranges_.Begin(), ranges_.End(), range, less);
 
     if (from == to) {
@@ -116,8 +127,8 @@ bool MemoryMap::Register(uintptr_t begin, uintptr_t end, MemoryStatus status) {
         }
     }
 
-    range.begin = util::Min(range.begin, from->begin);
-    range.end = util::Max(range.end, (to - 1)->end);
+    range.begin = std::min(range.begin, from->begin);
+    range.end = std::max(range.end, (to - 1)->end);
 
     ranges_.Insert(ranges_.Erase(from, to), range);
     ranges_.Erase(
@@ -147,9 +158,9 @@ bool MemoryMap::FindIn(
         return l.end <= r.begin;
     };
 
-    MemoryRange *from = util::LowerBound(
+    MemoryRange *from = std::lower_bound(
         ranges_.Begin(), ranges_.End(), range, less);
-    MemoryRange *to = util::UpperBound(
+    MemoryRange *to = std::upper_bound(
         ranges_.Begin(), ranges_.End(), range, less);
 
     for (MemoryRange *it = from; it != to; ++it) {
@@ -159,10 +170,10 @@ bool MemoryMap::FindIn(
             continue;
         }
 
-        r.begin = util::Clamp(r.begin, begin, end);
-        r.end = util::Clamp(r.end, begin, end);
+        r.begin = common::Clamp(r.begin, begin, end);
+        r.end = common::Clamp(r.end, begin, end);
 
-        const uintptr_t addr = util::AlignUp(
+        const uintptr_t addr = common::AlignUp(
             r.begin, static_cast<uintptr_t>(alignment));
         if (addr + size <= r.end) {
             *ret = addr;

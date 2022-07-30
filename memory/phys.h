@@ -1,9 +1,11 @@
 #ifndef __MEMORY_PHYS_H__
 #define __MEMORY_PHYS_H__
 
-#include "util/fixed_vector.h"
-#include "util/stddef.h"
-#include "util/stdint.h"
+#include <cstddef>
+#include <cstdint>
+
+#include "common/fixed_vector.h"
+
 
 namespace memory {
 
@@ -46,7 +48,7 @@ private:
         size_t size, size_t alignment, MemoryStatus status,
         uintptr_t* ret);
 
-    util::FixedVector<MemoryRange, 128> ranges_;
+    common::FixedVector<MemoryRange, 128> ranges_;
 };
 
 }  // namespace memory

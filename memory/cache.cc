@@ -3,6 +3,7 @@
 #include "util/stdint.h"
 #include "util/utility.h"
 #include "util/math.h"
+#include "util/algorithms.h"
 
 namespace memory {
 
