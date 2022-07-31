@@ -189,13 +189,13 @@ bool Cache::Free(void* ptr) {
 }
 
 Slab* Cache::AllocateSlab() {
-    Contigous memory = AllocatePhysical(layout_.slab_size);
+    Contigous memory = AllocatePhysical(layout_.slab_size).release();
     if (!memory.Size()) {
         return nullptr;
     }
     Slab* slab = reinterpret_cast<Slab*>(
             memory.FromAddress() + layout_.control_offset);
-    ::new (slab) Slab(this, util::Move(memory), layout_);
+    ::new (slab) Slab(this, memory, layout_);
     occupied_ += layout_.slab_size;
     return slab;
 }

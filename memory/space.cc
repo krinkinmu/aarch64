@@ -175,12 +175,12 @@ bool CompatibleMapping(const Request& req, const Context& ctx) {
 
 
 PageTable* AddressSpace::AllocatePageTable() {
-    Contigous memory = AllocatePhysical(sizeof(PageTable));
+    Contigous memory = AllocatePhysical(sizeof(PageTable)).release();
     if (memory.Size() == 0) {
         return nullptr;
     }
     PageTable* table = reinterpret_cast<PageTable*>(memory.FromAddress());
-    ::new (table) PageTable(util::Move(memory));
+    ::new (table) PageTable(memory);
     table->address_space = this;
     return table;
 }
@@ -189,9 +189,9 @@ void AddressSpace::FreePageTable(PageTable* table) {
     if (table == nullptr) {
         return;
     }
-    Contigous memory = util::Move(table->memory);
+    Contigous memory = table->memory;
     table->~PageTable();
-    FreePhysical(util::Move(memory));
+    FreePhysical(memory);
 }
 
 void AddressSpace::Clear(PageTable* table) {

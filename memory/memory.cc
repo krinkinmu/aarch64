@@ -147,40 +147,20 @@ void Zone::Unite(Page* page, size_t from) {
 
 Contigous::Contigous() : zone_(nullptr), pages_(nullptr), order_(0) {}
 
+Contigous::Contigous(nullptr_t) : Contigous() {}
+
 Contigous::Contigous(class Zone* zone, struct Page* pages, size_t order)
     : zone_(zone), pages_(pages), order_(order) {}
 
-Contigous::~Contigous() {
-    zone_ = nullptr;
-    pages_ = nullptr;
-    order_ = 0;
-}
-
-Contigous::Contigous(Contigous&& other)
-        : zone_(other.zone_), pages_(other.pages_), order_(other.order_) {
-    other.zone_ = nullptr;
-    other.pages_ = nullptr;
-    other.order_ = 0;
-}
-
-Contigous& Contigous::operator=(Contigous&& other) {
-    if (this == &other) {
-        return *this;
-    }
-    zone_ = other.zone_;
-    pages_ = other.pages_;
-    order_ = other.order_;
-    other.zone_ = nullptr;
-    other.pages_ = nullptr;
-    other.order_ = 0;
-    return *this;
-}
-
 Zone* Contigous::Zone() { return zone_; }
+
+const Zone* Contigous::Zone() const { return zone_; }
 
 Page* Contigous::Pages() { return pages_; }
 
-size_t Contigous::Order() { return order_; }
+const Page* Contigous::Pages() const { return pages_; }
+
+size_t Contigous::Order() const { return order_; }
 
 uintptr_t Contigous::FromAddress() const {
     if (pages_ == nullptr) {
@@ -200,27 +180,44 @@ size_t Contigous::Size() const {
     return static_cast<size_t>(1) << (order_ + kPageBits);
 }
 
+Contigous& Contigous::operator*() { return *this; }
 
-Contigous AllocatePhysical(size_t size) {
+Contigous* Contigous::operator->() { return this; }
+
+Contigous::operator bool() const { return pages_ != nullptr; }
+
+bool operator==(const Contigous& c1, const Contigous& c2) {
+    return c1.Pages() == c2.Pages();
+}
+
+bool operator!=(const Contigous& c1, const Contigous& c2) {
+    return c1.Pages() != c2.Pages();
+}
+
+void DeleteContigous::operator()(Contigous mem) {
+    FreePhysical(mem);
+}
+
+ContigousPtr AllocatePhysical(size_t size) {
     if (size == 0) {
-        return Contigous();
+        return ContigousPtr(nullptr);
     }
 
     const size_t power = 1 + util::MostSignificantBit(size - 1);
     const size_t order = util::Max(power, kPageBits) - kPageBits;
 
     if (order > kMaxOrder) {
-        return Contigous();
+        return ContigousPtr(nullptr);
     }
 
     for (auto it = AllZones.Begin(); it != AllZones.End(); ++it) {
         Page* pages = it->AllocatePages(order);
 
         if (pages != nullptr) {
-            return Contigous(&*it, pages, order);
+            return ContigousPtr(Contigous(&*it, pages, order));
         }
     }
-    return Contigous();
+    return ContigousPtr(nullptr);
 }
 
 void FreePhysical(Contigous mem) {
