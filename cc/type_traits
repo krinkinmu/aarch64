@@ -3,6 +3,9 @@
 
 namespace std {
 
+template <typename ...>
+using void_t = void;
+
 template <typename T, T v>
 struct integral_constant {
     using value_type = T;
@@ -42,6 +45,33 @@ struct is_lvalue_reference<T&> : true_type {};
 
 template <typename T>
 inline constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
+
+
+template <typename T>
+struct type_identity { using type = T; };
+
+
+namespace {
+
+template <typename T, typename = void>
+struct is_referenceable : public false_type {};
+
+template <typename T>
+struct is_referenceable<T, void_t<T&>> : public true_type {};
+
+template <typename T, bool = is_referenceable<T>::value>
+struct add_lvalue_reference_impl { using type = T; };
+
+template <typename T>
+struct add_lvalue_reference_impl<T, true> { using type = T&; };
+
+}  // namespace
+
+template <typename T>
+struct add_lvalue_reference : public add_lvalue_reference_impl<T> {};
+
+template <typename T>
+using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
 
 }  // namespace std
 
