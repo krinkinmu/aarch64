@@ -1,3 +1,4 @@
+export MAKEFLAGS += -r
 export CC := clang
 export CXX := clang
 export AR := llvm-ar
