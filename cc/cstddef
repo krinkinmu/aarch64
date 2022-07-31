@@ -3,6 +3,9 @@
 
 extern "C" {
 #include <stddef.h>
+
+typedef decltype(nullptr) nullptr_t;
+
 }
 
 #endif  // __CC_CSTDDEF__
