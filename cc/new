@@ -5,4 +5,5 @@
 
 void* operator new(size_t, void* ptr);
 
-#endif  // __CC_NEW_H__
+#endif  // __CC_NEW__
+
