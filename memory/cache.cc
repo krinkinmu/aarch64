@@ -1,4 +1,4 @@
-#include "memory/cache.h"
+#include "cache.h"
 
 #include <new>
 #include <cstdint>
@@ -18,7 +18,7 @@ size_t ObjectSize(size_t size, size_t alignment) {
 }
 
 size_t SlabSize(size_t size, size_t control) {
-    constexpr size_t kMinObjects = 8;
+    constexpr size_t kMinObjects = 32;
     constexpr size_t kMinSize = 4096;
 
     const size_t min_bytes = size * kMinObjects + control;
@@ -150,7 +150,9 @@ Layout Allocator::Layout() const { return layout_; }
 
 
 Cache::Cache(size_t size, size_t alignment)
-    : layout_(impl::MakeLayout(size, alignment)), allocator_(layout_) {}
+    : layout_(impl::MakeLayout(size, alignment))
+    , allocator_(layout_)
+{}
 
 Cache::~Cache() {
     if (!partial_.Empty() || !full_.Empty()) {
@@ -164,6 +166,8 @@ size_t Cache::Allocated() const { return allocated_; }
 size_t Cache::Occupied() const { return allocator_.Allocated(); }
 
 size_t Cache::Reclaimable() const { return reclaimable_; }
+
+size_t Cache::ObjectSize() const { return layout_.object_size; }
 
 bool Cache::Reclaim() {
     bool ret = Reclaimable() != 0;

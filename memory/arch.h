@@ -1,7 +1,7 @@
 #ifndef __MEMORY_ARCH_H__
 #define __MEMORY_ARCH_H__
 
-#include "util/stdint.h"
+#include <cstdint>
 
 namespace memory {
 

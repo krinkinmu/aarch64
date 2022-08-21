@@ -9,17 +9,17 @@ int LeastSignificantBit(uint64_t x);
 int MostSignificantBit(uint64_t x);
 
 template <typename T>
-T AlignDown(T x, T alignment) {
+constexpr T AlignDown(T x, T alignment) {
     return x & ~(alignment - 1);
 }
 
 template <typename T>
-T AlignUp(T x, T alignment) {
+constexpr T AlignUp(T x, T alignment) {
     return AlignDown(x + alignment - 1, alignment);
 }
 
 template <typename T>
-T Clamp(T x, T from, T to) {
+constexpr T Clamp(T x, T from, T to) {
     if (x < from) {
         x = from;
     }
@@ -30,7 +30,7 @@ T Clamp(T x, T from, T to) {
 }
 
 template <typename T>
-T Bits(T x, unsigned from, unsigned to) {
+constexpr T Bits(T x, unsigned from, unsigned to) {
     const T m1 = ~((static_cast<T>(1) << from) - 1);
     const T m2 = ~((static_cast<T>(1) << to) - 1);
     return x & m1 & m2;

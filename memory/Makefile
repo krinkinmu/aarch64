@@ -5,7 +5,7 @@ CXXFLAGS := \
     -fno-exceptions -fno-rtti -Ofast -g -fPIE -target aarch64-unknown-none \
     -Wall -Werror -Wframe-larger-than=1024 -pedantic -I.. -I../c -I../cc
 
-CXXSRCS := phys.cc memory.cc cache.cc
+CXXSRCS := phys.cc memory.cc cache.cc alloc.cc
 CXXOBJS := $(CXXSRCS:.cc=.o)
 
 OBJS := $(CXXOBJS)

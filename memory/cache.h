@@ -4,7 +4,7 @@
 #include <cstddef>
 
 #include "common/intrusive_list.h"
-#include "memory/memory.h"
+#include "memory.h"
 
 
 namespace memory {
@@ -90,6 +90,7 @@ public:
     size_t Allocated() const;
     size_t Occupied() const;
     size_t Reclaimable() const;
+    size_t ObjectSize() const;
 
     bool Reclaim();
     void* Allocate();
