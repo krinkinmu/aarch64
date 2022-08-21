@@ -1,6 +1,6 @@
-#include "util/endian.h"
+#include "endian.h"
 
-namespace util {
+namespace common {
 
 namespace {
 
@@ -166,4 +166,4 @@ le16_t ToLittleEndian(uint16_t v)
 
 #endif
 
-}  // namespace util
+}  // namespace common

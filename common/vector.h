@@ -1,9 +1,9 @@
-#ifndef __UTIL_VECTOR_H__
-#define __UTIL_VECTOR_H__
+#ifndef __COMMON_VECTOR_H__
+#define __COMMON_VECTOR_H__
 
 #include <algorithm>
 
-namespace util {
+namespace common {
 
 template <typename T, typename A>
 class Vector : private A {
@@ -262,6 +262,6 @@ bool Vector<T, A>::Resize(size_t size, const T& item) {
     return true;
 }
 
-}  // util
+}  // common
 
-#endif  // __UTIL_VECTOR_H__
+#endif  // __COMMON_VECTOR_H__

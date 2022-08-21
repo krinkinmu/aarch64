@@ -6,8 +6,8 @@
 
 #include "common/intrusive_list.h"
 #include "common/string_view.h"
-#include "util/vector.h"
-#include "util/allocator.h"
+#include "common/vector.h"
+#include "common/allocator.h"
 #include "fdt/blob.h"
 #include "memory/cache.h"
 #include "memory/memory.h"
@@ -180,7 +180,7 @@ void VectorTest() {
           << " bytes before vector test\n";
 
     {
-        util::Vector<LargeItem, util::PhysicalAllocator<LargeItem>> v;
+        common::Vector<LargeItem, common::PhysicalAllocator<LargeItem>> v;
 
         while (v.PushBack(LargeItem())) {
             if ((v.Size() % 100000) == 0) {

@@ -1,9 +1,9 @@
-#ifndef __UTIL_ENDIAN_H__
-#define __UTIL_ENDIAN_H__
+#ifndef __COMMON_ENDIAN_H__
+#define __COMMON_ENDIAN_H__
 
 #include <cstdint>
 
-namespace util {
+namespace common {
 
 typedef uint64_t be64_t;
 typedef uint32_t be32_t;
@@ -35,6 +35,6 @@ le32_t ToLittleEndian(uint32_t v);
 le16_t ToLittleEndian(uint16_t v);
 le8_t ToLittleEndian(uint8_t v);
 
-}  // namespace util
+}  // namespace common
 
-#endif  // __UTIL_ENDIAN_H__
+#endif  // __COMMON_ENDIAN_H__

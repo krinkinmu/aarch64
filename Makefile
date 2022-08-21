@@ -17,10 +17,6 @@ libkernel.a:
 	cd kernel ; cargo build $(CARGO_TARGET) --release ; cd -
 	cp kernel/target/aarch64-unknown-custom/release/libkernel.a $@
 
-libutil.a:
-	$(MAKE) -C util
-	cp util/libutil.a $@
-
 libmemory.a:
 	$(MAKE) -C memory
 	cp memory/libmemory.a $@
@@ -49,10 +45,10 @@ libcommon.a:
 	$(MAKE) -C common
 	cp common/libcommon.a $@
 
-kernel.elf: libc.a libcc.a libcommon.a libutil.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
+kernel.elf: libc.a libcc.a libcommon.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
 	$(LD) $(LDFLAGS) $^ -o $@
 
-.PHONY: clean all default test libcommon.a libc.a libcc.a libkernel.a libbootstrap.a libutil.a libmemory.a libfdt.a
+.PHONY: clean all default test libcommon.a libc.a libcc.a libkernel.a libbootstrap.a libmemory.a libfdt.a
 
 all: kernel.elf
 
@@ -74,7 +70,6 @@ clean:
 	cd kernel ; cargo clean ; cd -
 	$(MAKE) -C bootstrap clean
 	$(MAKE) -C memory clean
-	$(MAKE) -C util clean
 	$(MAKE) -C fdt clean
 	$(MAKE) -C c clean
 	$(MAKE) -C cc clean

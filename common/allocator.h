@@ -1,9 +1,9 @@
-#ifndef __UTIL_ALLOCATOR_H__
-#define __UTIL_ALLOCATOR_H__
+#ifndef __COMMON_ALLOCATOR_H__
+#define __COMMON_ALLOCATOR_H__
 
 #include "memory/memory.h"
 
-namespace util {
+namespace common {
 
 template <typename T>
 struct PhysicalAllocator {
@@ -82,6 +82,6 @@ bool PhysicalAllocator<T>::Deallocate(T* ptr) {
     return true;
 }
 
-}  // namespace util
+}  // namespace common
 
-#endif  // __UTIL_ALLOCATOR_H__
+#endif  // __COMMON_ALLOCATOR_H__
