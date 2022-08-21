@@ -1,9 +1,9 @@
 #ifndef __FDT_SCANNER_H__
 #define __FDT_SCANNER_H__
 
-#include "util/stddef.h"
-#include "util/stdint.h"
-#include "util/string_view.h"
+#include <cstddef>
+#include <cstdint>
+#include "common/string_view.h"
 
 namespace fdt {
 
@@ -71,7 +71,7 @@ public:
     bool ConsumeBe32(uint32_t* val);
     bool ConsumeBe64(uint64_t* val);
     bool ConsumeCstr(const char** str);
-    bool ConsumeCstr(util::StringView* str);
+    bool ConsumeCstr(common::StringView* str);
     bool ConsumeBytes(size_t size, const uint8_t** data);
     bool ConsumeToken(Token* token);
     bool AlignForward(size_t alignment);

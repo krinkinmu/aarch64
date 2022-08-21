@@ -1,10 +1,10 @@
-#include "util/string_view.h"
+#include "string_view.h"
 
-#include "util/algorithms.h"
-#include "util/string.h"
+#include <algorithm>
+#include <cstring>
 
 
-namespace util {
+namespace common {
 
 StringView::StringView() : data_(nullptr), size_(0) {}
 
@@ -24,7 +24,7 @@ char StringView::operator[](size_t pos) const { return data_[pos]; }
 const char* StringView::Data() const { return data_; }
 
 int StringView::Compare(const StringView& other) const {
-    const size_t len = Min(Size(), other.Size());
+    const size_t len = std::min(Size(), other.Size());
     const int rc = strncmp(data_, other.data_, len);
 
     if (rc != 0) {
@@ -84,4 +84,4 @@ bool operator!=(const StringView& l, const StringView& r) {
     return !(l == r);
 }
 
-}  // namespace util
+}  // namespace common

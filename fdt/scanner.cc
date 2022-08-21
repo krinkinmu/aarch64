@@ -56,7 +56,7 @@ bool Scanner::ConsumeBe64(uint64_t* val) {
 }
 
 bool Scanner::ConsumeCstr(const char** str) {
-    util::StringView s;
+    common::StringView s;
 
     if (!ConsumeCstr(&s)) {
         return false;
@@ -66,12 +66,12 @@ bool Scanner::ConsumeCstr(const char** str) {
     return true;
 }
 
-bool Scanner::ConsumeCstr(util::StringView* str) {
+bool Scanner::ConsumeCstr(common::StringView* str) {
     const char *start = reinterpret_cast<const char*>(&data_[off_]);
 
     for (size_t size = 0; off_ + size < size_; size++) {
         if (start[size] == '\0') {
-            *str = util::StringView(start, size);
+            *str = common::StringView(start, size);
             off_ += size + 1;
             return true;
         }

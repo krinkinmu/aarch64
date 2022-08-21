@@ -1,11 +1,11 @@
 CXX := clang++
 AR := llvm-ar
 CXXFLAGS := \
-    -MMD -mno-red-zone -std=c++17 -ffreestanding -fno-threadsafe-statics -I.. \
+    -MMD -mno-red-zone -std=c++17 -ffreestanding -fno-threadsafe-statics \
     -fno-exceptions -fno-rtti -Ofast -g -fPIE -target aarch64-unknown-none \
-    -Wall -Werror -Wframe-larger-than=1024 -pedantic
+    -Wall -Werror -Wframe-larger-than=1024 -pedantic -I.. -I../c -I../cc
 
-CXXSRCS := string.cc endian.cc new.cc intrusive_list.cc math.cc string_view.cc
+CXXSRCS := endian.cc
 CXXOBJS := $(CXXSRCS:.cc=.o)
 
 OBJS := $(CXXOBJS)

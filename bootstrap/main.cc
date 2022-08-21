@@ -1,15 +1,16 @@
 #include <cstdint>
 #include <cstring>
 
-#include "util/utility.h"
-#include "util/intrusive_list.h"
-#include "util/new.h"
+#include <new>
+#include <utility>
+
+#include "common/intrusive_list.h"
+#include "common/string_view.h"
 #include "util/vector.h"
 #include "util/allocator.h"
 #include "fdt/blob.h"
 #include "memory/cache.h"
 #include "memory/memory.h"
-#include "memory/space.h"
 #include "bootstrap/memory.h"
 #include "bootstrap/pl011.h"
 #include "common/logging.h"
@@ -28,7 +29,7 @@ struct Data {
 bool LookupDTB(
         const struct Data *data, size_t size, uint64_t *begin, uint64_t *end) {
     for (size_t i = 0; i < size; ++i) {
-        if (util::StringView("dtb") == data[i].name) {
+        if (common::StringView("dtb") == data[i].name) {
             *begin = data[i].begin;
             *end = data[i].end;
             return true;
@@ -67,7 +68,7 @@ void PrintMMap(const memory::MemoryMap& mmap) {
     }    
 }
 
-struct Item : public util::ListNode<Item> {
+struct Item : public common::ListNode<Item> {
     memory::Contigous m;
 };
 
@@ -91,7 +92,7 @@ void UniquePtrTest() {
 
 void AllocatorTest() {
     constexpr size_t kSize = 4096;
-    util::IntrusiveList<Item> items;
+    common::IntrusiveList<Item> items;
     size_t allocated = 0;
 
     while (1) {
@@ -111,8 +112,7 @@ void AllocatorTest() {
     size_t freed = 0;
 
     while (!items.Empty()) {
-        Item* item = &*items.Begin();
-        items.PopFront();
+        Item* item = items.PopFront();
         memory::FreePhysical(item->m);
         ++freed;
     }
@@ -120,14 +120,14 @@ void AllocatorTest() {
     common::Log() << "Freed " << freed << " " << kSize << " byte pages\n";
 }
 
-struct Pointer : public util::ListNode<Pointer> {
+struct Pointer : public common::ListNode<Pointer> {
     char buf[512];
     void* ptr;
 };
 
 void CacheTest() {
     memory::Cache cache(sizeof(Pointer), alignof(Pointer));
-    util::IntrusiveList<Pointer> ptrs;
+    common::IntrusiveList<Pointer> ptrs;
     size_t allocated = 0;
 
     while (1) {
@@ -150,8 +150,7 @@ void CacheTest() {
     size_t freed = 0;
 
     while (!ptrs.Empty()) {
-        Pointer* ptr = &*ptrs.Begin();
-        ptrs.PopFront();
+        Pointer* ptr = ptrs.PopFront();
         cache.Free(ptr->ptr);
         freed++;
     }

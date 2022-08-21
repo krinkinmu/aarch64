@@ -1,7 +1,7 @@
 #ifndef __UTIL_VECTOR_H__
 #define __UTIL_VECTOR_H__
 
-#include "util/algorithms.h"
+#include <algorithm>
 
 namespace util {
 
@@ -80,7 +80,7 @@ private:
         }
 
         for (size_t i = 0; i < size_; ++i) {
-            ::new(static_cast<void*>(&items[i])) T(Move(items_[i]));
+            ::new(static_cast<void*>(&items[i])) T(std::move(items_[i]));
             items_[i].~T();
         }
 
@@ -95,7 +95,7 @@ private:
             return true;
         }
 
-        capacity = Max(Capacity() * 2 / 3, capacity);
+        capacity = std::max(Capacity() * 2 / 3, capacity);
         if (A::Grow(items_, capacity)) {
             capacity_ = capacity;
             return true;
@@ -109,12 +109,12 @@ private:
     }
 
     void PlaceAt(T& pos, T&& t) {
-        ::new(static_cast<void*>(pos)) T(Move(t));
+        ::new(static_cast<void*>(pos)) T(std::move(t));
     }
 
     template <typename... Args>
     void PlaceAt(T* pos, Args&&... args) {
-        ::new(static_cast<void*>(pos)) T(Forward<Args>(args)...);
+        ::new(static_cast<void*>(pos)) T(std::forward<Args>(args)...);
     }
 
     T *items_ = nullptr;
@@ -176,7 +176,7 @@ bool Vector<T, A>::EmplateBack(Args&&... args) {
         return false;
     }
 
-    PlaceAt(&items_[size_++], Forward<Args>(args)...);
+    PlaceAt(&items_[size_++], std::forward<Args>(args)...);
     return true;
 }
 
@@ -200,7 +200,7 @@ bool Vector<T, A>::Emplace(const T* pos, Args&&... args) {
         return false;
     }
 
-    PlaceAt(&items_[size_++], Forward(args)...);
+    PlaceAt(&items_[size_++], std::forward(args)...);
     RotateRight(Begin() + off, items_ + size_, 1);
     return true;
 }

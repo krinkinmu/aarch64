@@ -49,7 +49,7 @@ libcommon.a:
 	$(MAKE) -C common
 	cp common/libcommon.a $@
 
-kernel.elf: libcommon.a libc.a libcc.a libutil.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
+kernel.elf: libc.a libcc.a libcommon.a libutil.a libmemory.a libfdt.a libbootstrap.a #libkernel.a
 	$(LD) $(LDFLAGS) $^ -o $@
 
 .PHONY: clean all default test libcommon.a libc.a libcc.a libkernel.a libbootstrap.a libutil.a libmemory.a libfdt.a

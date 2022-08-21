@@ -18,12 +18,12 @@ public:
 
     size_t Size() const;
     size_t Length() const;
-    size_t Empty() const;
+    bool Empty() const;
 
     char operator[](size_t pos) const;
     const char *Data() const;
 
-    int Compate(const StringView& other) const;
+    int Compare(const StringView& other) const;
 
     StringView Substr(size_t from, size_t count) const;
 

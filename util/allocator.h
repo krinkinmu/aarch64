@@ -76,9 +76,9 @@ bool PhysicalAllocator<T>::Deallocate(T* ptr) {
         return false;
     }
 
-    memory::Contigous mem = Move(head->mem);
+    memory::Contigous mem = head->mem;
     head->~Header();
-    memory::FreePhysical(Move(mem));
+    memory::FreePhysical(mem);
     return true;
 }
 

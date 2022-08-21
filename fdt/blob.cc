@@ -88,7 +88,7 @@ bool ParseStartNode(Scanner *pos, Node *node) {
         return false;
     }
 
-    util::StringView name;
+    common::StringView name;
 
     if (!pos->ConsumeCstr(&name)) {
         return false;
@@ -214,7 +214,7 @@ bool Blob::ConsumeProperty(Scanner* pos, Property *property) const {
         return false;
     }
 
-    util::StringView name;
+    common::StringView name;
     Scanner str(&str_[off], strsz_ - off);
 
     if (!str.ConsumeCstr(&name)) {

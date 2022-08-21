@@ -3,18 +3,18 @@
 
 #include "fdt/scanner.h"
 #include "fdt/span.h"
-#include "util/string_view.h"
+#include "common/string_view.h"
 
 
 namespace fdt {
 
 struct Property {
-    util::StringView name;
+    common::StringView name;
     const uint8_t *data = nullptr;
     size_t size = 0;
 
     Property() = default;
-    Property(const util::StringView& name, const uint8_t *data, size_t size)
+    Property(const common::StringView& name, const uint8_t *data, size_t size)
     : name(name), data(data), size(size) {}
 
     bool ValueAsBe32(uint32_t* data) const;
@@ -32,11 +32,12 @@ struct Property {
 
 
 struct Node {
-    util::StringView name;
+    common::StringView name;
     Scanner offset;
 
     Node() = default;
-    Node(const util::StringView& name, Scanner off) : name(name), offset(off) {}
+    Node(const common::StringView& name, Scanner off)
+        : name(name), offset(off) {}
 };
 
 

@@ -1,10 +1,12 @@
-#include "memory/memory.h"
+#include "memory.h"
 
-#include "util/stdint.h"
-#include "util/string.h"
-#include "util/intrusive_list.h"
-#include "util/fixed_vector.h"
-#include "util/math.h"
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+
+#include "common/intrusive_list.h"
+#include "common/fixed_vector.h"
+#include "common/math.h"
 
 
 namespace memory {
@@ -19,7 +21,7 @@ constexpr uint64_t kPageFree = 1 << 0;
 }  // namespace
 
 
-struct Page : public util::ListNode<Page> {
+struct Page : public common::ListNode<Page> {
     uint64_t flags;
     size_t order;
 };
@@ -41,8 +43,7 @@ public:
                 continue;
             }
 
-            Page* page = &(*free_[from].Begin());
-            free_[from].PopFront();
+            Page* page = free_[from].PopFront();
             available_ -= static_cast<size_t>(1) << order;
             return Split(page, from, order);
         }
@@ -79,13 +80,13 @@ private:
     size_t available_;
     uintptr_t from_;
     uintptr_t to_;
-    util::IntrusiveList<Page> free_[kMaxOrder + 1];
+    common::IntrusiveList<Page> free_[kMaxOrder + 1];
 };
 
 
 namespace {
 
-util::FixedVector<Zone, 32> AllZones;
+common::FixedVector<Zone, 32> AllZones;
 
 
 size_t BuddyOffset(size_t offset, size_t order) {
@@ -135,8 +136,8 @@ void Zone::Unite(Page* page, size_t from) {
         free_[order].Unlink(buddy);
         ++order;
 
-        page_offset = util::Min(page_offset, buddy_offset);
-        page = util::Min(page, buddy);
+        page_offset = std::min(page_offset, buddy_offset);
+        page = std::min(page, buddy);
     }
 
     page->order = order;
@@ -203,8 +204,8 @@ ContigousPtr AllocatePhysical(size_t size) {
         return ContigousPtr(nullptr);
     }
 
-    const size_t power = 1 + util::MostSignificantBit(size - 1);
-    const size_t order = util::Max(power, kPageBits) - kPageBits;
+    const size_t power = 1 + common::MostSignificantBit(size - 1);
+    const size_t order = std::max(power, kPageBits) - kPageBits;
 
     if (order > kMaxOrder) {
         return ContigousPtr(nullptr);
@@ -250,8 +251,8 @@ size_t AvailablePhysical() {
 namespace {
 
 bool CreateZone(uintptr_t begin, uintptr_t end, MemoryMap* mmap) {
-    begin = util::AlignUp(begin, static_cast<uintptr_t>(kPageSize));
-    end = util::AlignDown(end, static_cast<uintptr_t>(kPageSize));
+    begin = common::AlignUp(begin, static_cast<uintptr_t>(kPageSize));
+    end = common::AlignDown(end, static_cast<uintptr_t>(kPageSize));
     if (begin >= end) {
         return true;
     }
@@ -267,7 +268,7 @@ bool CreateZone(uintptr_t begin, uintptr_t end, MemoryMap* mmap) {
     }
 
     struct Page* page = reinterpret_cast<struct Page*>(addr);
-    util::memset(page, 0, bytes);
+    memset(page, 0, bytes);
     return AllZones.EmplaceBack(page, pages, begin, end);    
 }
 
@@ -312,8 +313,8 @@ bool FreeMemory(Zone* zone, uintptr_t begin, uintptr_t end) {
         return false;
     }
 
-    begin = util::AlignUp(begin, static_cast<uintptr_t>(kPageSize));
-    end = util::AlignDown(end, static_cast<uintptr_t>(kPageSize));
+    begin = common::AlignUp(begin, static_cast<uintptr_t>(kPageSize));
+    end = common::AlignDown(end, static_cast<uintptr_t>(kPageSize));
     if (begin >= end) {
         return true;
     }
@@ -322,9 +323,9 @@ bool FreeMemory(Zone* zone, uintptr_t begin, uintptr_t end) {
         const size_t offset = addr >> kPageBits;
         const size_t pages = (end - addr) >> kPageBits;
 
-        const size_t align = util::LeastSignificantBit(offset);
-        const size_t size = util::MostSignificantBit(pages);
-        const size_t order = util::Min(util::Min(align, size), kMaxOrder);
+        const size_t align = common::LeastSignificantBit(offset);
+        const size_t size = common::MostSignificantBit(pages);
+        const size_t order = std::min(std::min(align, size), kMaxOrder);
 
         zone->FreePages(offset, order);
         addr += static_cast<uintptr_t>(1) << (kPageBits + order);
@@ -341,9 +342,9 @@ bool FreeUnusedMemory(MemoryMap* mmap) {
             continue;
         }
 
-        uintptr_t begin = util::AlignUp(
+        uintptr_t begin = common::AlignUp(
             range->begin, static_cast<uintptr_t>(kPageSize));
-        uintptr_t end = util::AlignDown(
+        uintptr_t end = common::AlignDown(
             range->end, static_cast<uintptr_t>(kPageSize));
         if (begin >= end) {
             continue;

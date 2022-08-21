@@ -1,7 +1,7 @@
 #ifndef __UTIL_ENDIAN_H__
 #define __UTIL_ENDIAN_H__
 
-#include "util/stdint.h"
+#include <cstdint>
 
 namespace util {
 

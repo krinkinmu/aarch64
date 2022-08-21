@@ -1,21 +1,35 @@
 #ifndef __MEMORY_SPACE_H__
 #define __MEMORY_SPACE_H__
 
-#include "util/stddef.h"
-#include "util/stdint.h"
+#include <cstddef>
+#include <cstdint>
 
 
 namespace memory {
 
-enum class AccessMode {
-    ReadOnly,
-    ReadWrite,
-    Executable,
+namespace impl {
+
+class PageTable {
+public:
+    static constexpr size_t kPageTableSize = 512;
+
+    PageTable(Contigous mem);
+
+    PageTable(const PageTable& other) = delete;
+    PageTable& operator=(const PageTable& other) = delete;
+    PageTable(PageTable&& other) = delete;
+    PageTable& operator=(PageTable&& other) = delete;
+
+    uintptr_t Address() const;
+    
+
+private:
+    Contigous memory_;
+    uint64_t *descriptors_;
 };
 
-struct PageTable;
-struct Request;
-struct Context;
+}  // namespace impl
+
 
 class AddressSpace {
 public:

@@ -1,7 +1,5 @@
 #include "pl011.h"
 
-#include "util/string_view.h"
-
 namespace {
 
 constexpr uint32_t DR = (0x000 / 4);

@@ -1,8 +1,9 @@
 #ifndef __FDT_SPAN_H__
 #define __FDT_SPAN_H__
 
+#include <cstddef>
+
 #include "fdt/scanner.h"
-#include "util/stddef.h"
 
 
 namespace fdt {
