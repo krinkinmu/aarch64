@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "common/intrusive_list.h"
 #include "common/fixed_vector.h"
 #include "common/math.h"
 
@@ -13,81 +12,9 @@ namespace memory {
 
 namespace {
 
-constexpr size_t kMaxOrder = 20;
-constexpr size_t kPageBits = 12;
-constexpr size_t kPageSize = (1 << kPageBits);
 constexpr uint64_t kPageFree = 1 << 0;
 
-}  // namespace
-
-
-struct Page : public common::ListNode<Page> {
-    uint64_t flags;
-    size_t order;
-};
-
-
-class Zone {
-public:
-    Zone(Page* page, size_t pages, uintptr_t from, uintptr_t to)
-        : page_(page), pages_(pages), from_(from), to_(to) {}
-
-    Zone(const Zone& other) = delete;
-    Zone& operator=(const Zone& other) = delete;
-    Zone(Zone&& other) = delete;
-    Zone& operator=(Zone&& other) = delete;
-
-    Page* AllocatePages(size_t order) {
-        for (size_t from = order; from <= kMaxOrder; ++from) {
-            if (free_[from].Empty()) {
-                continue;
-            }
-
-            Page* page = free_[from].PopFront();
-            available_ -= static_cast<size_t>(1) << order;
-            return Split(page, from, order);
-        }
-        return nullptr;
-    }
-
-    void FreePages(Page* pages, size_t order) {
-        Unite(pages, order);
-        available_ += static_cast<size_t>(1) << order;
-    }
-
-    void FreePages(size_t offset, size_t order) {
-        FreePages(&page_[offset - Offset()], order);
-    }
-
-    size_t Offset() const { return FromAddress() >> kPageBits; }
-    size_t PageOffset(const Page* page) const {
-        return Offset() + (page - page_);
-    }
-    uintptr_t PageAddress(const Page* page) const {
-        return FromAddress() + ((page - page_) << kPageBits);
-    }
-    size_t Pages() const { return pages_; }
-    size_t Available() const { return available_; }
-    uintptr_t FromAddress() const { return from_; }
-    uintptr_t ToAddress() const { return to_; }
-
-private:
-    Page* Split(Page* page, size_t from, size_t to);
-    void Unite(Page* page, size_t from);
-
-    Page* page_;
-    size_t pages_;
-    size_t available_;
-    uintptr_t from_;
-    uintptr_t to_;
-    common::IntrusiveList<Page> free_[kMaxOrder + 1];
-};
-
-
-namespace {
-
 common::FixedVector<Zone, 32> AllZones;
-
 
 size_t BuddyOffset(size_t offset, size_t order) {
     return offset ^ (static_cast<size_t>(1) << order);
@@ -95,6 +22,51 @@ size_t BuddyOffset(size_t offset, size_t order) {
 
 }  // namespace
 
+
+Zone::Zone(Page* page, size_t pages, uintptr_t from, uintptr_t to)
+    : page_(page), pages_(pages), from_(from), to_(to)
+{}
+
+Page* Zone::AllocatePages(size_t order) {
+    for (size_t from = order; from <= kMaxOrder; ++from) {
+        if (free_[from].Empty()) {
+            continue;
+        }
+
+        Page* page = free_[from].PopFront();
+        available_ -= static_cast<size_t>(1) << order;
+        return Split(page, from, order);
+    }
+    return nullptr;
+}
+
+void Zone::FreePages(Page* pages, size_t order) {
+    Unite(pages, order);
+    available_ += static_cast<size_t>(1) << order;
+}
+
+void Zone::FreePages(size_t addr, size_t order) {
+    const size_t offset = addr >> kPageBits;
+    FreePages(&page_[offset - Offset()], order);
+}
+
+size_t Zone::Offset() const { return FromAddress() >> kPageBits; }
+
+size_t Zone::PageOffset(const Page* page) const {
+    return Offset() + (page - page_);
+}
+
+uintptr_t Zone::PageAddress(const Page* page) const {
+    return FromAddress() + ((page - page_) << kPageBits);
+}
+
+size_t Zone::Pages() const { return pages_; }
+
+size_t Zone::Available() const { return available_; }
+
+uintptr_t Zone::FromAddress() const { return from_; }
+
+uintptr_t Zone::ToAddress() const { return to_; }
 
 Page* Zone::Split(Page* page, size_t from, size_t to) {
     const size_t offset = Offset();
@@ -197,6 +169,15 @@ bool operator!=(const Contigous& c1, const Contigous& c2) {
 
 void DeleteContigous::operator()(Contigous mem) {
     FreePhysical(mem);
+}
+
+Zone* AddressZone(uintptr_t addr) {
+    for (auto it = AllZones.Begin(); it != AllZones.End(); ++it) {
+        if (addr >= it->FromAddress() && addr < it->ToAddress()) {
+            return &*it;
+        }
+    }
+    return nullptr;
 }
 
 ContigousPtr AllocatePhysical(size_t size) {
@@ -327,7 +308,7 @@ bool FreeMemory(Zone* zone, uintptr_t begin, uintptr_t end) {
         const size_t size = common::MostSignificantBit(pages);
         const size_t order = std::min(std::min(align, size), kMaxOrder);
 
-        zone->FreePages(offset, order);
+        zone->FreePages(addr, order);
         addr += static_cast<uintptr_t>(1) << (kPageBits + order);
     }
     return true;
