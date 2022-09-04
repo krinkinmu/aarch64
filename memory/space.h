@@ -9,72 +9,120 @@ namespace memory {
 
 namespace impl {
 
+struct Memory {
+    uintptr_t addr;
+    uint64_t attr;
+};
+
 class PageTable {
 public:
     static constexpr size_t kPageTableSize = 512;
+    static constexpr uint64_t kPresent = 1ull << 0;
+    static constexpr uint64_t kTable = 1ull << 1;
 
-    PageTable(Contigous mem);
+    // These flags need to match MAIR_EL2 register configuration.
+    // I only have normal memory configured in MAIR_EL2 for now (write-back
+    // caching policy, non-transient allocation on reads and writes for both
+    // outer and inner domains).
+    static constexpr uint64_t kNormalMemory = 1ull << 2;
+    static constexpr uint64_t kMemoryAttributeMask = kNormalMemory;
+
+    static constexpr uint64_t kPrivileged = 1ull << 6;
+    static constexpr uint64_t kWritable = 1ull << 7;
+    static constexpr uint64_t kExecuteNever = 1ull << 54;
+    static constexpr uint64_t kAccessMask = kPrivileged | kWritable | kExecuteNever;
+
+    static constexpr uint64_t kAttributesMask = kAccessMask | kMemoryAttributeMask;
+    static constexpr uint64_t ((1ull << 48) - 1) & ~((1ull << 12) - 1);
+
+    PageTable(uintptr_t address);
 
     PageTable(const PageTable& other) = delete;
     PageTable& operator=(const PageTable& other) = delete;
-    PageTable(PageTable&& other) = delete;
-    PageTable& operator=(PageTable&& other) = delete;
+
+    PageTable(PageTable&& other) = default;
+    PageTable& operator=(PageTable&& other) = default;
 
     uintptr_t Address() const;
-    
+
+    bool IsClear(size_t entry) const;
+    bool IsTable(size_t entry) const;
+    bool IsMemory(size_t entry) const;
+
+    void Clear(size_t entry);
+    void SetTable(size_t entry, const PageTable& table);
+    void SetMemory(size_t entry, const Memory& memory);
+
+    Memory GetMemory(size_t entry) const;
+    PageTable GetTable(size_t entry) const;
 
 private:
-    Contigous memory_;
     uint64_t *descriptors_;
 };
 
 }  // namespace impl
 
 
-class AddressSpace {
-public:
-    AddressSpace();
-    ~AddressSpace();
+struct MemoryRange {
+    uintptr_t from;
+    uintptr_t to;
 
-
-    AddressSpace(AddressSpace&& other) = default;
-    AddressSpace& operator=(AddressSpace&& other) = default;
-
-    AddressSpace(AddressSpace& other) = delete;
-    AddressSpace& operator=(AddressSpace& other) = delete;
-
-
-    bool Map(uintptr_t phys, uintptr_t virt, size_t size, AccessMode mode);
-    bool Remap(uintptr_t virt, size_t size, AccessMode mode);
-
-    bool IoMap(uintptr_t phys, uintptr_t virt, size_t size, AccessMode mode);
-    bool IoRemap(uintptr_t virt, size_t size, AccessMode mode);
-
-
-    uintptr_t Base() const;
-
-private:
-
-    bool MapInternal(
-        uintptr_t virt, uintptr_t phys, size_t size, uint64_t attr);
-
-
-    bool MapTableEntry(const Request& request, const Context& context);
-    bool MapTableEntries(
-        const Request& request, PageTable* table, size_t level);
-
-    PageTable* AllocatePageTable();
-    void FreePageTable(PageTable* table);
-    void Clear(PageTable* table);
-
-    PageTable* root_;
+    bool Overlap(const MemoryRange& other) const;
+    bool Touch(const MemoryRange& other) const;
+    bool Before(const MemoryRange& other) const;
+    bool After(const MemoryRange& other) const;
 };
 
+class Mapping {
+public:
+    Mapping(const MemoryRange& range, uint64_t attrs);
+    virtual ~Mapping() {}
 
-class MemoryMap;
+    Mapping(const Mapping&) = delete;
+    Mapping& operator=(const Mapping&) = delete;
+    Mapping(Mapping&&) = delete;
+    Mapping& operator=(Mapping&&) = delete;
 
-bool SetupAddressSpace(const MemoryMap& mmap, AddressSpace* space);
-bool SetupMapping(const AddressSpace& space);
+    MemoryRange AddressRange() const;
+    uint64_t Attributes() const;
+
+    virtual bool Map(uintptr_t from, uintptr_t to, PageTable* root) = 0;
+    virtual void Unmap(uintptr_t from, uintptr_t to, PageTable* root) = 0;
+    virtual bool Fault(uintptr_t addr, PageTable* root) = 0;
+
+private:
+    MemoryRange range_;
+    uint64_t attrs_;
+};
+
+class StaticMapping : public Mapping {
+public:
+    MemoryMapping(const MemoryRange& virt, const MemoryRange& phys, uint64_t attrs);
+
+    bool Map(uintptr_t from, uintptr_t to, PageTable* root) override;
+    void Unmap(uintptr_t from, uintptr_t to, PageTable* root) override;
+    bool Fault(uintptr_t addr, PageTable* root) override;
+
+private:
+    MemoryRange phys_;
+};
+
+class AddressSpace {
+public:
+    uintptr_t PageTable() const;
+
+    bool RegisterMapping(std::unique_ptr<Mapping> mapping);
+    const Mapping* FindMapping(uintptr_t addr);
+    std::unique_ptr<Mapping> UnregisterMapping(const Mapping* mapping);
+
+    bool Translate(uintptr_t virt, uintptr_t* phys);
+    bool Populate(uintptr_t from, uintptr_t to);
+    bool Fault(uintptr_t addr); 
+
+private:
+};
+
+bool SetupMapping();
 
 }  // namespace memory
 
