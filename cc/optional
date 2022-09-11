@@ -1,0 +1,219 @@
+#ifndef __CC_OPTIONAL__
+#define __CC_OPTIONAL__
+
+#include <algorithm>
+#include <utility>
+
+namespace std {
+
+namespace impl {
+
+struct empty {};
+
+
+template <typename T>
+union storage {
+    constexpr storage() : empty() {}
+    ~storage() {}
+
+
+    template <typename... Args>
+    void construct(Args&&... args) {
+        new (ptr()) T(forward<Args>(args)...);
+    }
+
+    void destruct() {
+        ptr()->~T();
+    }
+
+    constexpr T* ptr() { return &val; }
+    constexpr const T* ptr() const { return &val; }
+
+    constexpr T& value() { return val; }
+    constexpr const T& value() const { return val; }
+
+    empty empty;
+    T val;
+};
+
+}  // namespace impl
+
+
+struct nullopt_t {};
+inline constexpr nullopt_t nullopt = nullopt_t{};
+
+
+template <typename T>
+class optional {
+public:
+    using value_type = T;
+
+    constexpr optional() = default;
+    constexpr optional(nullopt_t) {}
+
+    template <typename U = T>
+    constexpr optional(U&& value)
+    {
+        emplace(forward<U>(value));
+    } 
+
+    constexpr optional(const optional& other) {
+        if (other.has_value()) {
+            emplace(other.value());
+        }
+    }
+
+    constexpr optional(optional&& other) {
+        if (other.has_value()) {
+            emplace(move(other.value()));
+        }
+    }
+
+    ~optional() {
+        reset();
+    }
+
+    constexpr optional& operator=(nullopt_t) {
+        reset();
+        return *this;
+    }
+
+    template <typename U = T>
+    constexpr optional& operator=(U&& value) {
+        if (has_value()) {
+            value() = forward<U>(value);
+        } else {
+            emplace(forward<U>(value));
+        }
+        return *this;
+    }
+
+    constexpr optional& operator=(const optional& other) {
+        if (other) {
+            if (has_value()) {
+                value() = *other;
+            } else {
+                emplace(*other);
+            }
+        } else {
+            reset();
+        }
+        return *this;
+    }
+
+    constexpr optional& operator=(optional&& other) {
+        if (other) {
+            if (has_value()) {
+                value() = move(*other);
+            } else {
+                emplace(move(*other));
+            }
+        } else {
+            reset();
+        }
+        return *this;
+    }
+
+    constexpr const T* operator->() const {
+        return storage_.ptr();
+    }
+
+    constexpr T* operator->() {
+        return storage_.ptr();
+    }
+
+    constexpr const T& operator*() const & {
+        return value();
+    }
+
+    constexpr T& operator*() & {
+        return value();
+    }
+
+    constexpr const T&& operator*() const && {
+        return move(value());
+    }
+
+    constexpr T&& operator*() && {
+        return move(value());
+    }
+
+    constexpr explicit operator bool() const {
+        return has_value();
+    }
+
+    constexpr bool has_value() const {
+        return initialized_;
+    }
+
+    constexpr T& value() & {
+        return storage_.value();
+    }
+
+    constexpr const T& value() const & {
+        return storage_.value();
+    }
+
+    constexpr T&& value() && {
+        return move(storage_.value());
+    }
+
+    constexpr const T&& value() const && {
+        return move(storage_.value());
+    }
+
+    template <typename U>
+    constexpr T value_or(U&& default_value) const & {
+        if (has_value()) {
+            return value();
+        } else {
+            return T(forward<U>(default_value));
+        }
+    }
+
+    template <typename U>
+    constexpr T value_or(U&& default_value) && {
+        if (has_value()) {
+            return move(value());
+        } else {
+            return T(forward<U>(default_value));
+        }
+    }
+
+    constexpr void swap(optional& other) {
+        using std::swap;
+
+        if (has_value() && other.has_value()) {
+            swap(value(), other.value());
+        } else if (has_value()) {
+            emplace(move(value()));
+            reset();
+        } else if (other.has_value()) {
+            emplace(move(other.value()));
+            other.reset();
+        }
+    }
+
+    constexpr void reset() {
+        if (has_value()) {
+            storage_.destruct();
+            initialized_ = false;
+        }
+    }
+
+    template <typename... Args>
+    constexpr T& emplace(Args&&... args) {
+        reset();
+        storage_.construct(forward<Args>(args)...);
+        initialized_ = true;
+        return value();
+    }
+
+private:
+    bool initialized_ = false;
+    impl::storage<T> storage_;
+};
+
+}  // namespace std
+
+#endif  // __CC_OPTIONAL__
