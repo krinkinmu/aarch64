@@ -88,12 +88,12 @@ void* Allocate(size_t size) {
             reinterpret_cast<uintptr_t>(ptr) + MetadataSize());
     }
 
-    Contigous mem = AllocatePhysical(allocation_size).release();
-    if (mem.Size() != 0) {
-        Metadata* m = reinterpret_cast<Metadata*>(mem.FromAddress());
+    auto mem = AllocatePhysical(allocation_size);
+    if (mem) {
+        Metadata* m = reinterpret_cast<Metadata*>(mem->FromAddress());
         m->cache = nullptr;
-        m->mem = mem;
-        return reinterpret_cast<void*>(mem.FromAddress() + MetadataSize());
+        m->mem = *mem;
+        return reinterpret_cast<void*>(mem->FromAddress() + MetadataSize());
     }
 
     return nullptr;

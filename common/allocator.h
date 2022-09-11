@@ -49,14 +49,14 @@ struct PhysicalAllocator {
 
 template <typename T>
 T* PhysicalAllocator<T>::Allocate(size_t size) {
-    memory::Contigous mem = memory::AllocatePhysical(AllocationSize(size)).release();
-    if (mem.Size() == 0) {
+    auto mem = memory::AllocatePhysical(AllocationSize(size));
+    if (!mem) {
         return nullptr;
     }
 
-    Header *header = reinterpret_cast<Header*>(mem.FromAddress());
+    Header *header = reinterpret_cast<Header*>(mem->FromAddress());
     ::new (static_cast<void*>(header)) Header();
-    header->mem = mem;
+    header->mem = *mem;
     return header->items;
 }
 

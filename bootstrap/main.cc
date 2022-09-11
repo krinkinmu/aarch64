@@ -72,37 +72,19 @@ struct Item : public common::ListNode<Item> {
     memory::Contigous m;
 };
 
-void UniquePtrTest() {
-    constexpr size_t kSize = 4096;
-
-    for (size_t i = 0; i != 10; ++i) {
-        common::Log() << "Available " << memory::AvailablePhysical() << " bytes before allocation\n";
-        {
-            auto m = memory::AllocatePhysical(kSize);
-            if (!m) {
-                common::Log() << "Failed to allocate " << kSize << " bytes\n";
-                break;
-            }
-            memset(reinterpret_cast<void*>(m->FromAddress()), 0, m->Size());
-            common::Log() << "Available " << memory::AvailablePhysical() << " bytes after allocation\n";
-        }
-        common::Log() << "Available " << memory::AvailablePhysical() << " bytes after free\n";
-    }
-}
-
 void AllocatorTest() {
     constexpr size_t kSize = 4096;
     common::IntrusiveList<Item> items;
     size_t allocated = 0;
 
     while (1) {
-        auto m = memory::AllocatePhysical(kSize).release();
-        if (!m.Size()) {
+        auto m = memory::AllocatePhysical(kSize);
+        if (!m) {
             break;
         }
-        memset(reinterpret_cast<void*>(m.FromAddress()), 0, m.Size());
-        Item* item = reinterpret_cast<Item*>(m.FromAddress());
-        ::new(static_cast<void*>(&item->m)) memory::Contigous(m);
+        memset(reinterpret_cast<void*>(m->FromAddress()), 0, m->Size());
+        Item* item = reinterpret_cast<Item*>(m->FromAddress());
+        ::new(static_cast<void*>(&item->m)) memory::Contigous(*m);
         items.LinkAt(items.Begin(), item);
         ++allocated;
     }
@@ -268,12 +250,6 @@ extern "C" void kernel(struct Data *data, size_t size) {
     common::Log() << "Initialization complete.\n";
     common::Log() << "Total " << memory::TotalPhysical() << " bytes\n";
     common::Log() << "Available " << memory::AvailablePhysical() << " bytes\n";
-
-    UniquePtrTest();
-    UniquePtrTest();
-    UniquePtrTest();
-
-    common::Log() << "Available after test " << memory::AvailablePhysical() << " bytes\n";
 
     AllocatorTest();
     AllocatorTest();

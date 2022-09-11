@@ -112,22 +112,22 @@ bool Slab::Free(void* ptr) {
 Allocator::Allocator(struct Layout layout) : allocated_(0), layout_(layout) {}
 
 Slab* Allocator::Allocate(const Cache* cache) {
-    Contigous memory = AllocatePhysical(layout_.slab_size).release();
-    if (!memory.Size()) {
+    auto mem = AllocatePhysical(layout_.slab_size);
+    if (!mem) {
         return nullptr;
     }
     Slab* slab = reinterpret_cast<Slab*>(
-            memory.FromAddress() + layout_.control_offset);
-    ::new (slab) Slab(cache, memory, layout_);
+            mem->FromAddress() + layout_.control_offset);
+    ::new (slab) Slab(cache, *mem, layout_);
     allocated_ += layout_.slab_size;
     return slab;
 }
 
 void Allocator::Free(Slab* slab) {
-    Contigous memory = slab->Memory();
+    Contigous mem = slab->Memory();
     slab->~Slab();
     allocated_ -= layout_.slab_size;
-    FreePhysical(memory);
+    FreePhysical(mem);
 }
 
 Slab* Allocator::Find(void* ptr) {

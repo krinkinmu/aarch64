@@ -20,6 +20,15 @@ size_t BuddyOffset(size_t offset, size_t order) {
     return offset ^ (static_cast<size_t>(1) << order);
 }
 
+Zone* AddressZone(uintptr_t addr) {
+    for (auto it = AllZones.Begin(); it != AllZones.End(); ++it) {
+        if (addr >= it->FromAddress() && addr < it->ToAddress()) {
+            return &*it;
+        }
+    }
+    return nullptr;
+}
+
 }  // namespace
 
 
@@ -40,14 +49,23 @@ Page* Zone::AllocatePages(size_t order) {
     return nullptr;
 }
 
-void Zone::FreePages(Page* pages, size_t order) {
+void Zone::FreePages(Page* pages) {
+    const size_t order = pages->order;
     Unite(pages, order);
     available_ += static_cast<size_t>(1) << order;
 }
 
+void Zone::FreePages(size_t addr) {
+    const size_t offset = addr >> kPageBits;
+    Page* pages = &page_[offset - Offset()];
+    FreePages(pages);
+}
+
 void Zone::FreePages(size_t addr, size_t order) {
     const size_t offset = addr >> kPageBits;
-    FreePages(&page_[offset - Offset()], order);
+    Page* pages = &page_[offset - Offset()];
+    pages->order = order;
+    FreePages(pages);
 }
 
 size_t Zone::Offset() const { return FromAddress() >> kPageBits; }
@@ -153,11 +171,6 @@ size_t Contigous::Size() const {
     return static_cast<size_t>(1) << (order_ + kPageBits);
 }
 
-Contigous& Contigous::operator*() { return *this; }
-
-Contigous* Contigous::operator->() { return this; }
-
-Contigous::operator bool() const { return pages_ != nullptr; }
 
 bool operator==(const Contigous& c1, const Contigous& c2) {
     return c1.Pages() == c2.Pages();
@@ -167,47 +180,44 @@ bool operator!=(const Contigous& c1, const Contigous& c2) {
     return c1.Pages() != c2.Pages();
 }
 
-void DeleteContigous::operator()(Contigous mem) {
-    FreePhysical(mem);
-}
 
-Zone* AddressZone(uintptr_t addr) {
-    for (auto it = AllZones.Begin(); it != AllZones.End(); ++it) {
-        if (addr >= it->FromAddress() && addr < it->ToAddress()) {
-            return &*it;
-        }
-    }
-    return nullptr;
-}
-
-ContigousPtr AllocatePhysical(size_t size) {
+std::optional<Contigous> AllocatePhysical(size_t size) {
     if (size == 0) {
-        return ContigousPtr(nullptr);
+        return Contigous(nullptr);
     }
 
     const size_t power = 1 + common::MostSignificantBit(size - 1);
     const size_t order = std::max(power, kPageBits) - kPageBits;
 
     if (order > kMaxOrder) {
-        return ContigousPtr(nullptr);
+        return std::nullopt;
     }
 
     for (auto it = AllZones.Begin(); it != AllZones.End(); ++it) {
         Page* pages = it->AllocatePages(order);
 
         if (pages != nullptr) {
-            return ContigousPtr(Contigous(&*it, pages, order));
+            return Contigous(&*it, pages, order);
         }
     }
-    return ContigousPtr(nullptr);
+    return std::nullopt;
 }
 
 void FreePhysical(Contigous mem) {
     if (mem.Size() == 0) {
         return;
     }
-    mem.Zone()->FreePages(mem.Pages(), mem.Order());
+    mem.Zone()->FreePages(mem.Pages());
 }
+
+void FreePhysical(uintptr_t addr) {
+    if (addr == 0) {
+        return;
+    }
+    Zone* zone = AddressZone(addr);
+    zone->FreePages(addr);    
+}
+
 
 size_t TotalPhysical() {
     size_t total = 0;
@@ -228,6 +238,7 @@ size_t AvailablePhysical() {
 
     return available;
 }
+
 
 namespace {
 
@@ -348,6 +359,7 @@ bool FreeUnusedMemory(MemoryMap* mmap) {
 }
 
 }  // namespace
+
 
 bool SetupAllocator(MemoryMap* mmap) {
     if (!CreateZones(mmap)) {

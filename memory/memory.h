@@ -2,10 +2,9 @@
 #define __MEMORY_H__
 
 #include <cstddef>
-#include <memory>
+#include <optional>
 
 #include "common/intrusive_list.h"
-
 #include "phys.h"
 
 
@@ -32,7 +31,8 @@ public:
     Zone& operator=(Zone&&) = delete;
 
     Page* AllocatePages(size_t order);
-    void FreePages(Page* pages, size_t order);
+    void FreePages(Page* pages);
+    void FreePages(uintptr_t addr);
     void FreePages(uintptr_t addr, size_t order);
 
     size_t Offset() const;
@@ -78,10 +78,6 @@ public:
     uintptr_t ToAddress() const;
     size_t Size() const;
 
-    Contigous& operator*();
-    Contigous* operator->();
-    explicit operator bool() const;
-
 private:
     class Zone* zone_;
     struct Page* pages_;
@@ -92,20 +88,11 @@ bool operator==(const Contigous& l, const Contigous& r);
 bool operator!=(const Contigous& l, const Contigous& r);
 
 
-struct DeleteContigous {
-    using pointer = Contigous;
-
-    void operator()(Contigous mem);
-};
-
-using ContigousPtr = std::unique_ptr<Contigous, DeleteContigous>;
-
-
 bool SetupAllocator(MemoryMap* map);
 
-Zone* AddressZone(uintptr_t addr);
-ContigousPtr AllocatePhysical(size_t size);
+std::optional<Contigous> AllocatePhysical(size_t size);
 void FreePhysical(Contigous mem);
+void FreePhysical(uintptr_t addr);
 
 size_t TotalPhysical();
 size_t AvailablePhysical();
